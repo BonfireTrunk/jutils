@@ -1,7 +1,7 @@
 package today.bonfire.jutils;
 
 import com.google.common.io.BaseEncoding;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import today.bonfire.jutils.constants.DigestHash;
 
 import javax.crypto.Mac;
@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-@Slf4j
+@Log4j2
 public class Digest {
 
   /**

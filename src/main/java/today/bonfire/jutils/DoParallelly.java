@@ -1,13 +1,13 @@
 package today.bonfire.jutils;
 
 import io.activej.eventloop.Eventloop;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-@Slf4j
+@Log4j2
 public class DoParallelly {
 
   /**
