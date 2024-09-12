@@ -1,24 +1,24 @@
 package today.bonfire.jutils;
 
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
 import java.security.Security;
 
-@Log4j2
+@Slf4j
 public class MiscTest {
 
   @Test
   public void test1() {
     var providers = Security.getProviders();
     for (var provider : providers) {
-      System.out.println("Provider: " + provider.getName() + " - " + provider.getVersionStr());
-      System.out.println("Info: " + provider.getInfo());
-      System.out.println("Services:");
+      log.trace("Provider: {} - {}", provider.getName(), provider.getVersionStr());
+      log.trace("Info: {}", provider.getInfo());
+      log.trace("Services:");
       for (var service : provider.getServices()) {
-        System.out.println("  - " + service.getType() + ": " + service.getAlgorithm());
+        log.trace("  - {}: {}", service.getType(), service.getAlgorithm());
       }
-      System.out.println();
+      log.trace("");
     }
   }
 

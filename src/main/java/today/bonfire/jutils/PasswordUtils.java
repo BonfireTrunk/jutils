@@ -2,7 +2,7 @@ package today.bonfire.jutils;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.NonNull;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import today.bonfire.jutils.constants.DigestHash;
 
@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 
-@Log4j2
+@Slf4j
 public class PasswordUtils {
 
   // cannot change these later easily

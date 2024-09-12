@@ -1,7 +1,7 @@
 package today.bonfire.jutils;
 
 import com.google.common.io.BaseEncoding;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import today.bonfire.jutils.constants.DigestHash;
 
 import javax.crypto.Mac;
@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-@Log4j2
+@Slf4j
 public class Digest {
 
   /**
@@ -22,7 +22,7 @@ public class Digest {
   public static String Base64SHA3_256(String value) {
     if (value == null) return null;
     return Encoder.toBase64(
-        getDigest(DigestHash.SHA_3_256).digest(value.getBytes(StandardCharsets.UTF_8)));
+      getDigest(DigestHash.SHA_3_256).digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 
   static MessageDigest getDigest(DigestHash hashAlgo) {
@@ -42,7 +42,7 @@ public class Digest {
   public static String Base64SHA3_384(String value) {
     if (value == null) return null;
     return Encoder.toBase64(
-        getDigest(DigestHash.SHA_3_384).digest(value.getBytes(StandardCharsets.UTF_8)));
+      getDigest(DigestHash.SHA_3_384).digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 
   /**
@@ -54,25 +54,25 @@ public class Digest {
   public static String Base64SHA3_512(String value) {
     if (value == null) return null;
     return Encoder.toBase64(
-        getDigest(DigestHash.SHA_3_512).digest(value.getBytes(StandardCharsets.UTF_8)));
+      getDigest(DigestHash.SHA_3_512).digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 
   public static String Base64SHA_256(String value) {
     if (value == null) return null;
     return Encoder.toBase64(
-        getDigest(DigestHash.SHA_256).digest(value.getBytes(StandardCharsets.UTF_8)));
+      getDigest(DigestHash.SHA_256).digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 
   public static String Base64SHA_384(String value) {
     if (value == null) return null;
     return Encoder.toBase64(
-        getDigest(DigestHash.SHA_384).digest(value.getBytes(StandardCharsets.UTF_8)));
+      getDigest(DigestHash.SHA_384).digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 
   public static String Base64SHA_512(String value) {
     if (value == null) return null;
     return Encoder.toBase64(
-        getDigest(DigestHash.SHA_512).digest(value.getBytes(StandardCharsets.UTF_8)));
+      getDigest(DigestHash.SHA_512).digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 
   public static String HmacSHA256Hex(String data, String key) {
