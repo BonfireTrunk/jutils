@@ -4,6 +4,7 @@ import io.activej.eventloop.Eventloop;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -31,7 +32,24 @@ public class DoParallelly {
         }
       });
     }
+    eventLoop.run();
+    return results;
+  }
 
+  public static <T> Map<Integer, T> run(List<Callable<T>> callables) {
+    var eventLoop = Eventloop.create().withCurrentThread();
+    var results   = new HashMap<Integer, T>();
+    for (int i = 0; i < callables.size(); i++) {
+      int index = i;
+      eventLoop.postLast(() -> {
+        try {
+          results.put(index, callables.get(index).call());
+        } catch (Exception e) {
+          results.put(index, null);
+          log.error("Error in parallel run", e);
+        }
+      });
+    }
     eventLoop.run();
     return results;
   }
