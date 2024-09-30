@@ -1,15 +1,23 @@
 package today.bonfire.jutils.pool;
 
-public abstract class PoolEntity {
+public interface PoolEntity {
 
-  private Long entityId;
+  /**
+   * Retrieves the unique identifier of the entity.
+   * Failure to maintain this will cause the pool logic to fail and
+   * cause issues.
+   *
+   * @return the unique identifier for the life of the JVM of the entity as a Long.
+   */
+  Long getEntityId();
 
-  Long getEntityId() {
-    return entityId;
-  }
-
-  final void setEntityId(Long entityId) {
-    this.entityId = entityId;
-  }
+  /**
+   * Sets the unique identifier of the entity.
+   * END USERS SHOULD NOT SET THIS VALUE.
+   * This value is set by the library only.
+   *
+   * @param entityIdValue the unique identifier to set for the entity.
+   */
+  void setEntityId(Long entityIdValue);
 
 }
