@@ -43,6 +43,7 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
       scheduler.scheduleAtFixedRate(this::evictIdleObjects, idleEvictionTimeoutMillis, idleEvictionTimeoutMillis, TimeUnit.MILLISECONDS);
     }
     scheduler.scheduleAtFixedRate(this::removeAbandonedObjects, abandonedObjectTimeoutMillis, abandonedObjectTimeoutMillis, TimeUnit.MILLISECONDS);
+    log.info("Object pool created with maxPoolSize: {}, minPoolSize: {}", maxPoolSize, minPoolSize);
   }
 
   private void evictIdleObjects() {
@@ -64,6 +65,7 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
 
       // Destroy collected objects
       for (PooledEntity<T> pooledEntity : objectsToDestroy) {
+        log.debug("Evicting idle object with id {} and destroying it.", pooledEntity.getEntityId());
         destroyObject(pooledEntity);
       }
     } catch (Exception e) {
@@ -89,6 +91,7 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
       });
 
       for (PooledEntity<T> pooledEntity : objectsToRemove) {
+        log.info("Removing abandoned object with id {} and destroying it.", pooledEntity.getEntityId());
         destroyObject(pooledEntity);
       }
     } catch (Exception e) {
@@ -112,15 +115,19 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
           log.warn("Timeout waiting to borrow object from pool and max pool size reached");
         }
       }
+      if (pooledEntity != null) {
+        if (!objectFactory.isObjectValid(pooledEntity.getObject())) {
+          throw new InterruptedException("Resource validation failed");
+        }
+        pooledEntity.borrow();
+        borrowedObjects.put(pooledEntity.getEntityId(), pooledEntity);
+        log.debug("Resource borrowed - id: {}, current pool size: {}", pooledEntity.getEntityId(), idleObjects.size() + borrowedObjects.size());
+        return pooledEntity.getObject();
+      } else {
+        throw new InterruptedException("Failed to borrow object from pool");
+      }
     } finally {
       lock.unlock();
-    }
-    if (pooledEntity != null) {
-      pooledEntity.borrow();
-      borrowedObjects.put(pooledEntity.getEntityId(), pooledEntity);
-      return pooledEntity.getObject();
-    } else {
-      throw new InterruptedException("Failed to borrow object from pool");
     }
   }
 
@@ -131,28 +138,31 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
   public void returnObject(T obj, boolean broken) {
     var pooledEntity = borrowedObjects.get(obj.getEntityId());
     if (pooledEntity != null) {
-      if (broken) pooledEntity.setBroken(true);
-      if (pooledEntity.isBroken()) {
-        destroyObject(pooledEntity);
-        log.info("Returned broken entity with id {} and destroyed it.", pooledEntity.getEntityId());
-      } else {
-        pooledEntity.markIdle();
-        borrowedObjects.remove(pooledEntity.getEntityId());
-        idleObjects.addFirst(pooledEntity);
-      }
       lock.lock();
       try {
+        if (broken) pooledEntity.setBroken(true);
+        if (pooledEntity.isBroken()) {
+          destroyObject(pooledEntity);
+          log.info("Returned broken entity with id {} and destroyed it.", pooledEntity.getEntityId());
+        } else {
+          pooledEntity.markIdle();
+          borrowedObjects.remove(pooledEntity.getEntityId());
+          idleObjects.addFirst(pooledEntity);
+          log.debug("Object returned - id: {}, current pool size: {}", pooledEntity.getEntityId(), idleObjects.size() + borrowedObjects.size());
+        }
         notEmpty.signal();
       } finally {
         lock.unlock();
       }
     } else {
       log.error("Attempted returning object that is not in borrowed objects list. EntityId: {}", obj.getEntityId());
+      objectFactory.destroyObject(obj);
     }
   }
 
   @Override
   public void close() {
+    log.info("Closing object pool");
     scheduler.shutdown();
     borrowedObjects.values().forEach(this::destroyObject);
     idleObjects.forEach(this::destroyObject);

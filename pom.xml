@@ -6,7 +6,7 @@
 
   <groupId>today.bonfire</groupId>
   <artifactId>jutils</artifactId>
-  <version>1.0.5</version>
+  <version>1.0.6</version>
 
   <properties>
     <maven.compiler.source>17</maven.compiler.source>
@@ -18,7 +18,6 @@
     <commons-lang3.version>3.17.0</commons-lang3.version>
     <guava.version>33.3.0-jre</guava.version>
     <jsoup.version>1.18.1</jsoup.version>
-    <activej-eventloop.version>5.5</activej-eventloop.version>
     <jakarta.validation-api.version>3.1.0</jakarta.validation-api.version>
   </properties>
 
@@ -49,11 +48,6 @@
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
       <version>${jsoup.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.activej</groupId>
-      <artifactId>activej-eventloop</artifactId>
-      <version>${activej-eventloop.version}</version>
     </dependency>
     <dependency>
       <groupId>jakarta.validation</groupId>
