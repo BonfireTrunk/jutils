@@ -27,7 +27,7 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
   private final Condition                            notEmpty        = lock.newCondition();
   private final PooledObjectFactory<T>               objectFactory;
   private final AtomicLong                           idCounter       = new AtomicLong(0);
-  ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+  ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
   public SimpleObjectPool(int maxPoolSize, int minPoolSize, long idleEvictionTimeout, long abandonedObjectTimeout, PooledObjectFactory<T> objectFactory) {
     this.maxPoolSize                  = maxPoolSize;
@@ -117,14 +117,15 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
       }
       if (pooledEntity != null) {
         if (!objectFactory.isObjectValid(pooledEntity.getObject())) {
-          throw new InterruptedException("Resource validation failed");
+          destroyObject(pooledEntity);
+          throw new PoolResourceException("Resource validation failed");
         }
         pooledEntity.borrow();
         borrowedObjects.put(pooledEntity.getEntityId(), pooledEntity);
         log.debug("Resource borrowed - id: {}, current pool size: {}", pooledEntity.getEntityId(), idleObjects.size() + borrowedObjects.size());
         return pooledEntity.getObject();
       } else {
-        throw new InterruptedException("Failed to borrow object from pool");
+        throw new PoolResourceException("Failed to borrow object from pool");
       }
     } finally {
       lock.unlock();
@@ -163,7 +164,19 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
   @Override
   public void close() {
     log.info("Closing object pool");
+    // Changes: Graceful shutdown
     scheduler.shutdown();
+    try {
+      if (!scheduler.awaitTermination(abandonedObjectTimeoutMillis, TimeUnit.MILLISECONDS)) {
+        log.warn("Scheduler did not terminate gracefully. Shutting down forcefully.");
+        scheduler.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      log.warn("Interrupted while waiting for scheduler to terminate.", e);
+      Thread.currentThread().interrupt();
+    }
+
+    // Destroy all objects in the borrowed and idle lists
     borrowedObjects.values().forEach(this::destroyObject);
     idleObjects.forEach(this::destroyObject);
   }
