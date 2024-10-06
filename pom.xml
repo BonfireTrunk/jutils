@@ -6,7 +6,7 @@
 
   <groupId>today.bonfire</groupId>
   <artifactId>jutils</artifactId>
-  <version>1.0.7</version>
+  <version>1.0.8</version>
 
   <properties>
     <maven.compiler.source>21</maven.compiler.source>
@@ -54,7 +54,6 @@
       <artifactId>jakarta.validation-api</artifactId>
       <version>${jakarta.validation-api.version}</version>
     </dependency>
-
 
     <!--    logging items -->
     <dependency>
