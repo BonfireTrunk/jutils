@@ -20,7 +20,19 @@ public interface PooledObjectFactory<T extends PoolEntity> {
    * @return {@code true} if the object is valid and can be reused,
    * {@code false} otherwise.
    */
+  boolean isObjectConnected(T obj);
+
+  /**
+   * Checks if the pooled object is still valid.
+   * This method should return true if the object is in a valid state,
+   * and false if the object should be discarded.
+   *
+   * @param obj the object to check, must not be null.
+   * @return {@code true} if the object is valid,
+   * {@code false} otherwise.
+   */
   boolean isObjectValid(T obj);
+
 
   /**
    * Destroys the pooled object, performing any necessary cleanup operations.

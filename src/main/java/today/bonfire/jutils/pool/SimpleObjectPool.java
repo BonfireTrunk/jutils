@@ -43,7 +43,32 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
       scheduler.scheduleAtFixedRate(this::evictIdleObjects, idleEvictionTimeoutMillis, idleEvictionTimeoutMillis, TimeUnit.MILLISECONDS);
     }
     scheduler.scheduleAtFixedRate(this::removeAbandonedObjects, abandonedObjectTimeoutMillis, abandonedObjectTimeoutMillis, TimeUnit.MILLISECONDS);
+    scheduler.scheduleAtFixedRate(this::removeStaleObjects, abandonedObjectTimeoutMillis, abandonedObjectTimeoutMillis, TimeUnit.MILLISECONDS);
     log.info("Object pool created with maxPoolSize: {}, minPoolSize: {}", maxPoolSize, minPoolSize);
+  }
+
+  private void removeStaleObjects() {
+    try {
+      List<PooledEntity<T>> objectsToDestroy = new ArrayList<>();
+
+      // Remove expired idle objects and collect them for destruction
+      idleObjects.removeIf(pooledEntity -> {
+        if (!objectFactory.isObjectValid(pooledEntity.getObject())) {
+          // Collect the object for destruction
+          objectsToDestroy.add(pooledEntity);
+          return true; // Indicate that this object should be removed
+        }
+        return false;
+      });
+
+      // Destroy collected objects
+      for (PooledEntity<T> pooledEntity : objectsToDestroy) {
+        log.debug("Evicting stale object with id {} and destroying it.", pooledEntity.getEntityId());
+        destroyObject(pooledEntity);
+      }
+    } catch (Exception e) {
+      log.warn("Error evicting stale objects", e);
+    }
   }
 
   private void evictIdleObjects() {
@@ -116,7 +141,7 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
         }
       }
       if (pooledEntity != null) {
-        if (!objectFactory.isObjectValid(pooledEntity.getObject())) {
+        if (!objectFactory.isObjectConnected(pooledEntity.getObject())) {
           destroyObject(pooledEntity);
           throw new PoolResourceException("Resource validation failed");
         }
