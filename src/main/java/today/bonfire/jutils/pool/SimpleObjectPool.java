@@ -48,9 +48,9 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
   }
 
   private void removeStaleObjects() {
+    List<PooledEntity<T>> objectsToDestroy = new ArrayList<>();
     try {
-      List<PooledEntity<T>> objectsToDestroy = new ArrayList<>();
-
+      lock.lock();
       // Remove expired idle objects and collect them for destruction
       idleObjects.removeIf(pooledEntity -> {
         if (!objectFactory.isObjectValid(pooledEntity.getObject())) {
@@ -68,14 +68,16 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
       }
     } catch (Exception e) {
       log.warn("Error evicting stale objects", e);
+    } finally {
+      lock.unlock();
     }
   }
 
   private void evictIdleObjects() {
+    long                  now              = System.currentTimeMillis();
+    List<PooledEntity<T>> objectsToDestroy = new ArrayList<>();
     try {
-      long                  now              = System.currentTimeMillis();
-      List<PooledEntity<T>> objectsToDestroy = new ArrayList<>();
-
+      lock.lock();
       // Remove expired idle objects and collect them for destruction
       idleObjects.removeIf(pooledEntity -> {
         if (idleObjects.size() > minPoolSize &&
@@ -95,6 +97,8 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
       }
     } catch (Exception e) {
       log.warn("Error evicting idle objects", e);
+    } finally {
+      lock.unlock();
     }
 
   }
@@ -105,10 +109,10 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
   }
 
   private void removeAbandonedObjects() {
+    long                  now             = System.currentTimeMillis();
+    List<PooledEntity<T>> objectsToRemove = new ArrayList<>();
     try {
-      long                  now             = System.currentTimeMillis();
-      List<PooledEntity<T>> objectsToRemove = new ArrayList<>();
-
+      lock.lock();
       borrowedObjects.forEach((id, pooledEntity) -> {
         if ((pooledEntity.isAbandoned(now, abandonedObjectTimeoutMillis))) {
           objectsToRemove.add(pooledEntity);
@@ -121,6 +125,8 @@ public class SimpleObjectPool<T extends PoolEntity> implements AutoCloseable {
       }
     } catch (Exception e) {
       log.warn("Error removing abandoned objects", e);
+    } finally {
+      lock.unlock();
     }
   }
 
