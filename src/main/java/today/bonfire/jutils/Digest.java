@@ -75,6 +75,12 @@ public class Digest {
       getDigest(DigestHash.SHA_512).digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 
+  public static String sha256(String value) {
+    if (value == null) return null;
+    return BaseEncoding.base16().encode(
+      getDigest(DigestHash.SHA_256).digest(value.getBytes(StandardCharsets.UTF_8)));
+  }
+
   public static String HmacSHA256Hex(String data, String key) {
     return BaseEncoding.base16().encode(hmacSHA(data, key, DigestHash.HMAC_SHA_256));
   }
