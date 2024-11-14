@@ -11,6 +11,8 @@ import java.util.Base64;
 
 public class Encoder {
 
+  static final BaseEncoding base16Encoding = BaseEncoding.base16()
+                                                         .lowerCase();
   private static final Base64.Encoder base64Encoder     = Base64.getUrlEncoder().withoutPadding();
   private static final Base64.Decoder base64Decoder     = Base64.getUrlDecoder();
   private static final Base64.Encoder base64MimeEncoder = Base64.getMimeEncoder();

@@ -10,6 +10,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import static today.bonfire.jutils.Encoder.base16Encoding;
+
 @Slf4j
 public class Digest {
 
@@ -73,6 +75,12 @@ public class Digest {
     if (value == null) return null;
     return Encoder.toBase64(
       getDigest(DigestHash.SHA_512).digest(value.getBytes(StandardCharsets.UTF_8)));
+  }
+
+  public static String sha256(String value) {
+    if (value == null) return null;
+    return base16Encoding.encode(
+      getDigest(DigestHash.SHA_256).digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 
   public static String HmacSHA256Hex(String data, String key) {
