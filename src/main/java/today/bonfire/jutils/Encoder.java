@@ -11,8 +11,8 @@ import java.util.Base64;
 
 public class Encoder {
 
-  static final BaseEncoding base16Encoding = BaseEncoding.base16()
-                                                         .lowerCase();
+  private static final BaseEncoding base16Encoding = BaseEncoding.base16()
+                                                                 .lowerCase();
   private static final Base64.Encoder base64Encoder     = Base64.getUrlEncoder().withoutPadding();
   private static final Base64.Decoder base64Decoder     = Base64.getUrlDecoder();
   private static final Base64.Encoder base64MimeEncoder = Base64.getMimeEncoder();
@@ -35,6 +35,18 @@ public class Encoder {
 
   public static String toBase64(byte[] bytes) {
     return new String(base64Encoder.encode(bytes), StandardCharsets.UTF_8);
+  }
+
+  public static String toBase32(byte[] bytes) {
+    return base32Encoder.encode(bytes);
+  }
+
+  public static String toBase32(String s) {
+    return toBase32(toByteArray(s));
+  }
+
+  public static String toBase16(byte[] bytes) {
+    return base16Encoding.encode(bytes);
   }
 
   public static byte[] toByteArray(String value) {
