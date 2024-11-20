@@ -21,11 +21,11 @@ public class Encoder {
                                                                       .omitPadding()
                                                                       .lowerCase();
 
-  public static String base64UrlEncode(String value) {
+  public static String urlEncode(String value) {
     return StringUtils.isBlank(value) ? value : URLEncoder.encode(value, StandardCharsets.UTF_8);
   }
 
-  public static String base64UrlDecode(String value) {
+  public static String urlDecode(String value) {
     return StringUtils.isBlank(value) ? value : URLDecoder.decode(value, StandardCharsets.UTF_8);
   }
 
