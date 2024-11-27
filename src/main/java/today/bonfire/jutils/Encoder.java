@@ -63,6 +63,11 @@ public class Encoder {
     return new String(base64MimeDecoder.decode(data.trim()), StandardCharsets.UTF_8);
   }
 
+
+  public static String encodeBase64Mime(String data) {
+    return encodeBase64Mime(toByteArray(data));
+  }
+
   public static String encodeBase64Mime(byte[] data) {
     return new String(base64MimeEncoder.encode(data), StandardCharsets.UTF_8);
   }
