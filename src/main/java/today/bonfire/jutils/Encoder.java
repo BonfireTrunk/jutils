@@ -3,6 +3,9 @@ package today.bonfire.jutils;
 import com.google.common.io.BaseEncoding;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Cleaner;
+import org.jsoup.safety.Safelist;
 
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -11,10 +14,11 @@ import java.util.Base64;
 
 public class Encoder {
 
-  private static final BaseEncoding base16Encoding = BaseEncoding.base16()
-                                                                 .lowerCase();
-  private static final Base64.Encoder base64Encoder     = Base64.getUrlEncoder().withoutPadding();
+  private static final BaseEncoding   base16Encoding   = BaseEncoding.base16()
+                                                                     .lowerCase();
+  private static final Base64.Encoder base64UrlEncoder = Base64.getUrlEncoder().withoutPadding();
   private static final Base64.Decoder base64Decoder     = Base64.getUrlDecoder();
+  private static final Base64.Encoder base64Encoder    = Base64.getEncoder();
   private static final Base64.Encoder base64MimeEncoder = Base64.getMimeEncoder();
   private static final Base64.Decoder base64MimeDecoder = Base64.getMimeDecoder();
   private static final BaseEncoding   base32Encoder     = BaseEncoding.base32()
@@ -29,12 +33,22 @@ public class Encoder {
     return StringUtils.isBlank(value) ? value : URLDecoder.decode(value, StandardCharsets.UTF_8);
   }
 
+  public static String HtmlEscape(String value) {
+    if (value == null) return null;
+    var cleaner = new Cleaner(Safelist.none());
+    return cleaner.clean(Jsoup.parse(value)).text();
+  }
+
   public static String toBase64String(String s) {
     return toBase64(toByteArray(s));
   }
 
   public static String toBase64(byte[] bytes) {
-    return new String(base64Encoder.encode(bytes), StandardCharsets.UTF_8);
+    return new String(base64UrlEncoder.encode(bytes), StandardCharsets.UTF_8);
+  }
+
+  public static String toBase64Basic(String s) {
+    return new String(base64Encoder.encode(toByteArray(s)), StandardCharsets.UTF_8);
   }
 
   public static String toBase32(byte[] bytes) {

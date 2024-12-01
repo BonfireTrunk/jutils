@@ -1,6 +1,7 @@
 package today.bonfire.jutils;
 
 import com.google.common.io.BaseEncoding;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.security.SecureRandom;
@@ -21,12 +22,31 @@ public class RandUtils {
   private static final int            DEF_RANDOM_BYTE_LEN  = 36; // ~ 36 * 8 = 288 bits of randomness
 
 
+  /**
+   * Returns a random {@code int} value between the specified
+   * origin (inclusive) and bound (exclusive).
+   *
+   * @param start the least value returned
+   * @param bound the upper bound (excluded)
+   * @return a random {@code int} value between the origin (inclusive)
+   * and the bound (exclusive)
+   */
   public static int newInt(int start, int bound) {
-    return secureRandom.nextInt(start, bound);
+    return RandomUtils.secureStrong().randomInt(start, bound);
   }
 
+
+  /**
+   * Returns a random {@code long} value between the specified
+   * origin (inclusive) and bound (exclusive).
+   *
+   * @param start the least value returned
+   * @param bound the upper bound (excluded)
+   * @return a random {@code long} value between the origin (inclusive)
+   * and the bound (exclusive)
+   */
   public static long newLong(long start, long bound) {
-    return secureRandom.nextLong(start, bound);
+    return RandomUtils.secureStrong().randomLong(start, bound);
   }
 
   /**
