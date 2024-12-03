@@ -25,6 +25,11 @@ public class Digest {
       getDigest(DigestHash.SHA_3_256).digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 
+  public static byte[] Base64SHA3_256AsBytes(String value) {
+    if (value == null) return null;
+    return getDigest(DigestHash.SHA_3_256).digest(value.getBytes(StandardCharsets.UTF_8));
+  }
+
   public static String Base32SHA3_256(String value) {
     if (value == null) return null;
     return Encoder.toBase32(
