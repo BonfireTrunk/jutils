@@ -11,6 +11,7 @@ public class TC {
   public static final long _30_DAYS  = 2592000; // 60 * 60 * 24 * 30
   public static final long _14_DAYS  = 1209600; // 60 * 60 * 24 * 14
   public static final long _7_DAYS   = 604800; // 60 * 60 * 24 * 7
+  public static final long _3_DAYS   = 259200; // 60 * 60 * 24 * 3
   public static final long _2_DAYS   = 172800; // 60 * 60 * 24 * 2
   public static final long _1_DAY    = 86400; // 60 * 60 * 24
   public static final long _12_HOURS = 43200; // 60 * 60 * 12
