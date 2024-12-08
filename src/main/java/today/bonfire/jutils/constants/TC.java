@@ -19,6 +19,7 @@ public class TC {
   public static final long _3_HOURS  = 10800; // 60 * 60 * 3
   public static final long _1_HOUR   = 3600; // 60 * 60
   public static final long _30_MINS  = 1800; // 60 * 30
+  public static final long _15_MINS  = 900; // 60 * 15
   public static final long _10_MINS  = 600; // 60 * 10
   public static final long _5_MINS   = 300; // 60 * 5
   public static final long _3_MINS   = 180; // 60 * 3
