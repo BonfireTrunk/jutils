@@ -1,8 +1,11 @@
 package today.bonfire.jutils;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
+@Slf4j
 public class Please {
 
   private static final Runnable emptyRunnable = () -> {};
@@ -32,6 +35,20 @@ public class Please {
    */
   public static <T> T tryThis(Callable<T> callable, Function<Exception, T> exceptionFunc) {
     return tryThis(callable, exceptionFunc, emptyRunnable);
+  }
+
+  /**
+   * Calls a given callable function and returns its value or logs the exception and returns null if
+   * the callable function throws an exception. The final function is not executed.
+   *
+   * @param callable the Callable to be executed
+   * @return the result of the Callable, or null if an exception occurred
+   */
+  public static <T> T tryThis(Callable<T> callable) {
+    return tryThis(callable, (e) -> {
+      log.error("Exception occurred", e);
+      return null;
+    }, emptyRunnable);
   }
 
   /**
