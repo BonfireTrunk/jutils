@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>today.bonfire.oss</groupId>
+    <artifactId>bonfire-oss-parent</artifactId>
+    <version>1.1.1</version>
+  </parent>
+
+  <artifactId>jutils</artifactId>
+  <version>1.0.9-SNAPSHOT</version>
+
+
+  <name>${project.groupId}:${project.artifactId}</name>
+  <description>This is a library that provides common utilities for Java developers building applications.
+    This library is a collection of useful stuff that we use repeatedly in our projects.
+    - Java 21+ compatible
+  </description>
+  <url>https://github.com/BonfireTrunk/jutils</url>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Bonfire Team</name>
+      <email>oss@bonfire.today</email>
+      <organization>Bonfire</organization>
+      <organizationUrl>https://github.com/BonfireTrunk</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/BonfireTrunk/jutils.git</connection>
+    <developerConnection>scm:git:ssh://github.com/BonfireTrunk/jutils.git</developerConnection>
+    <url>https://github.com/BonfireTrunk/jutils</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
+    <commons-lang3.version>3.17.0</commons-lang3.version>
+    <guava.version>33.3.0-jre</guava.version>
+    <jsoup.version>1.18.1</jsoup.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${commons-lang3.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+      <version>${jsoup.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+    </plugins>
+  </build>
+
+  <profiles>
+  </profiles>
+</project>
