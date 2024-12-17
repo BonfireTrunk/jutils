@@ -8,9 +8,7 @@ import org.slf4j.MDC;
 
 import java.util.HashSet;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.assertj.core.api.Assertions.*;
 
 
 @Slf4j
@@ -23,16 +21,14 @@ public class RandUtilsTest {
 
   @Test
   public void testTuidNotNull() {
-    String tuid = RandUtils.tuid(0);
-    log.debug("tuid: {}", tuid);
-    assertNotNull(tuid);
+    assertThatExceptionOfType(IllegalArgumentException.class)
+      .isThrownBy(() -> RandUtils.tuid(0));
   }
 
   @Test
   public void testTuidLength() {
     String tuid = RandUtils.tuid(12);
-    log.debug("tuid: {}", tuid);
-    assertEquals(29, tuid.length());
+    assertThat(tuid.length()).isEqualTo(29);
   }
 
   @Test
@@ -40,9 +36,9 @@ public class RandUtilsTest {
     var set = new HashSet<String>();
     for (int i = 0; i < 100000; i++) {
       var t = RandUtils.tuid();
-      assertFalse(set.contains(t));
+      assertThat(set.contains(t)).isFalse();
       set.add(t);
     }
-    assertEquals(100000, set.size());
+    assertThat(set.size()).isEqualTo(100000);
   }
 }

@@ -13,14 +13,14 @@ class BitSetHelpersTest {
   @Test
   void encodeBitSetToBase64_EncodesBitSetCorrectly() {
     // given
-    var bitSet = BitSetHelpers.newBitSet();
+    var bitSet = BitSetHelpers.empty();
     bitSet.set(126);
     bitSet.set(62);
     bitSet.set(15);
     bitSet.set(7);
     bitSet.set(3);
     bitSet.set(1);
-    var result = BitSetHelpers.encodeBitSetToBase64(bitSet);
+    var result = BitSetHelpers.encode(bitSet);
     assertEquals("ioAAAAAAAEAAAAAAAAAAQA", result);
   }
 
@@ -30,8 +30,8 @@ class BitSetHelpersTest {
     originalBitSet.set(0, true);
     originalBitSet.set(1, false);
     originalBitSet.set(62, true);
-    String base64String = BitSetHelpers.encodeBitSetToBase64(originalBitSet);
-    BitSet parsedBitSet = BitSetHelpers.parseBitSetEncodedString(base64String);
+    String base64String = BitSetHelpers.encode(originalBitSet);
+    BitSet parsedBitSet = BitSetHelpers.decode(base64String);
     assertEquals(originalBitSet, parsedBitSet);
   }
 }

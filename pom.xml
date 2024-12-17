@@ -4,34 +4,52 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>today.bonfire</groupId>
+  <parent>
+    <groupId>today.bonfire.oss</groupId>
+    <artifactId>bonfire-oss-parent</artifactId>
+    <version>1.1.1</version>
+  </parent>
+
   <artifactId>jutils</artifactId>
   <version>1.0.9-SNAPSHOT</version>
 
-  <properties>
-    <maven.compiler.source>21</maven.compiler.source>
-    <maven.compiler.target>21</maven.compiler.target>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <lombok.version>1.18.34</lombok.version>
-    <logback.version>1.5.8</logback.version>
+  <name>${project.groupId}:${project.artifactId}</name>
+  <description>This is a library that provides common utilities for Java developers building applications.
+    This library is a collection of useful stuff that we use repeatedly in our projects.
+    - Java 21+ compatible
+  </description>
+  <url>https://github.com/BonfireTrunk/jutils</url>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Bonfire Team</name>
+      <email>oss@bonfire.today</email>
+      <organization>Bonfire</organization>
+      <organizationUrl>https://github.com/BonfireTrunk</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/BonfireTrunk/jutils.git</connection>
+    <developerConnection>scm:git:ssh://github.com/BonfireTrunk/jutils.git</developerConnection>
+    <url>https://github.com/BonfireTrunk/jutils</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
     <commons-lang3.version>3.17.0</commons-lang3.version>
     <guava.version>33.3.0-jre</guava.version>
     <jsoup.version>1.18.1</jsoup.version>
-    <jakarta.validation-api.version>3.1.0</jakarta.validation-api.version>
   </properties>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-bom</artifactId>
-        <version>2.0.16</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -49,98 +67,13 @@
       <artifactId>jsoup</artifactId>
       <version>${jsoup.version}</version>
     </dependency>
-    <dependency>
-      <groupId>jakarta.validation</groupId>
-      <artifactId>jakarta.validation-api</artifactId>
-      <version>${jakarta.validation-api.version}</version>
-    </dependency>
-
-    <!--    logging items -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <version>${logback.version}</version>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-core</artifactId>
-      <version>${logback.version}</version>
-      <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>5.11.3</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.platform</groupId>
-      <artifactId>junit-platform-launcher</artifactId>
-      <version>1.11.3</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>${lombok.version}</version>
-      <scope>provided</scope>
-    </dependency>
   </dependencies>
 
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
-        <configuration>
-          <source>${maven.compiler.source}</source>
-          <target>${maven.compiler.target}</target>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>org.projectlombok</groupId>
-              <artifactId>lombok</artifactId>
-              <version>${lombok.version}</version>
-            </path>
-          </annotationProcessorPaths>
-        </configuration>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <version>3.3.1</version>
-        <executions>
-          <execution>
-            <id>attach-sources</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>jar-no-fork</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.0</version>
-      </plugin>
     </plugins>
   </build>
 
   <profiles>
-    <profile>
-      <id>dev</id>
-      <dependencies>
-        <!-- Add development-only dependencies here -->
-      </dependencies>
-    </profile>
   </profiles>
 </project>
