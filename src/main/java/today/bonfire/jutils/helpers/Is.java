@@ -26,9 +26,12 @@ public class Is {
    * - Domain part supports both regular domains and punycode (xn--) format
    * - Domain part must be valid with 2-25 character TLD or punycode TLD
    */
-  private static final Pattern EMAIL_PATTERN =
-    Pattern.compile(
-      "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:(?:xn--[a-z0-9]+(?<!-))|(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?))\\.(?:(?:(?:xn--[a-z0-9]+(?<!-))|(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?))\\.)*(?:xn--[a-z0-9]+(?<!-)|[a-zA-Z]{2,25})$");
+  private static final Pattern EMAIL_LOCAL_PART_PATTERN =
+    Pattern.compile("^[A-Za-z0-9](?:[a-zA-Z0-9._%+\\-]{0,61}[A-Za-z0-9])?$");
+
+  private static final Pattern DOMAIN_PATTERN =
+    Pattern.compile("^(?!.{256})(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+(?:[a-z]{2,63}|xn--[a-z0-9]{2,59})$");
+
 
   /**
    * Checks if a JSON string is blank or represents an empty value
@@ -99,7 +102,49 @@ public class Is {
     if (StringUtils.isBlank(email) || email.trim().length() < 5) {
       return false;
     }
-    return EMAIL_PATTERN.matcher(email).matches();
+
+    // Split the email into local part and domain part
+    var parts = email.split("@", 2);
+    if (parts.length != 2) {
+      return false;
+    }
+    var localPart  = parts[0];
+    var domainPart = parts[1];
+
+
+    // Validate the local part
+    if (!EMAIL_LOCAL_PART_PATTERN.matcher(localPart).matches()) return false;
+
+    if (localPart.contains("..")) return false;
+
+    // Validate the domain part
+    if (!DOMAIN_PATTERN.matcher(domainPart).matches()) return false;
+
+    return email.length() < 256;
+  }
+
+
+  /**
+   * Validates a custom hostname.
+   * The hostname must:
+   * - Not be null or empty
+   * - Not exceed 63 characters
+   * - Only contain alphanumeric characters, hyphens, and dots
+   * - make sure to store the hostname in lowercase for better results
+   *
+   * @param hostname The hostname to validate
+   */
+  public static boolean subDomain(String hostname) {
+    if (StringUtils.isBlank(hostname)) {
+      return false;
+    }
+
+    // Validate the hostname against the regex pattern
+    if (!hostname.matches("^[A-Za-z0-9](?:[A-Za-z0-9\\-]{0,61}[A-Za-z0-9])?$")) {
+      return false;
+    }
+
+    return hostname.length() <= 63 && !hostname.isEmpty();
   }
 
 }

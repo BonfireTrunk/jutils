@@ -175,11 +175,51 @@ class IsTest {
       "test@xn--.com",           // Invalid punycode (missing punycode part)
       "test@xn--invalid%.com",   // Invalid punycode characters
       "test@xn--a.xn--",         // Incomplete punycode in subdomain
-      "test@xn--90a3ac..xn--90a3ac" // Consecutive dots in punycode
+      "test@xn--90a3ac..xn--90a3ac", // Consecutive dots in punycode
+      "as..as@example.com"
     })
     @DisplayName("Should return false for invalid email addresses")
     void shouldReturnFalseForInvalidEmails(String input) {
       assertThat(Is.email(input)).isFalse();
+    }
+  }
+
+
+  @Nested
+  @DisplayName("subDomain method tests")
+  class SubDomainTests {
+    @ParameterizedTest
+    @ValueSource(strings = {
+      "domain",
+      "localhost",
+      "example",
+      "my-site",
+      "123abc",
+      "xn--80ak6aa92e"
+    })
+    @DisplayName("Should return true for valid single word subdomains")
+    void shouldReturnTrueForValidSubdomains(String input) {
+      assertThat(Is.subDomain(input)).isTrue();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {
+      "example.com",
+      "123.456",
+      "-invalid",
+      "invalid-",
+      "..invalid",
+      "invalid..",
+      "asdasd.",
+      ".asdasda",
+      "",
+      "asd_sadasd",
+      "example@domain"
+    })
+    @DisplayName("Should return false for invalid single word subdomains")
+    void shouldReturnFalseForInvalidSubdomains(String input) {
+      assertThat(Is.subDomain(input)).isFalse();
     }
   }
 }
