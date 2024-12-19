@@ -1,7 +1,10 @@
 package today.bonfire.oss.jutils.web;
 
 import org.apache.commons.lang3.StringUtils;
+import today.bonfire.oss.jutils.constants.CC;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,8 +36,10 @@ public class QueryParams {
 
     for (String pair : pairs) {
       String[] keyValue = pair.split("=");
-      String   key      = keyValue[0].trim();
-      String   value    = keyValue.length > 1 ? keyValue[1].trim() : null;
+      String key = URLDecoder.decode(keyValue[0].trim(), StandardCharsets.UTF_8);
+      String value = keyValue.length > 1
+                     ? URLDecoder.decode(keyValue[1].trim(), StandardCharsets.UTF_8)
+                     : null;
 
       queryParams.params.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
     }
@@ -70,7 +75,7 @@ public class QueryParams {
    */
   public Map<String, String> getParamsAsFlatMap() {
     Map<String, String> flatMap = new HashMap<>();
-    params.forEach((key, values) -> flatMap.put(key, String.join("|", values)));
+    params.forEach((key, values) -> flatMap.put(key, String.join(CC.Separator.COMMA, values)));
     return flatMap;
   }
 
