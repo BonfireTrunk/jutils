@@ -11,7 +11,7 @@
     <file>logs/app.log</file>
     <immediateFlush>false</immediateFlush>
     <rollingPolicy class="TimeBasedRollingPolicy">
-      <fileNamePattern>app_%d{yyyy-MM-dd}.log</fileNamePattern>
+      <fileNamePattern>logs/app_%d{yyyy-MM-dd}.log</fileNamePattern>
       <maxHistory>10</maxHistory>
       <totalSizeCap>500MB</totalSizeCap>
     </rollingPolicy>
