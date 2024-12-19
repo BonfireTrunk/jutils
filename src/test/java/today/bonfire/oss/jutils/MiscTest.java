@@ -1,6 +1,7 @@
 package today.bonfire.oss.jutils;
 
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.security.Security;
@@ -9,6 +10,7 @@ import java.security.Security;
 public class MiscTest {
 
   @Test
+  @Disabled("local experimentation")
   public void test1() {
     var providers = Security.getProviders();
     for (var provider : providers) {
@@ -24,8 +26,9 @@ public class MiscTest {
 
 
   @Test
-  public void test2() {
-    for (int i = 0; i < 65; i++) {
+  @Disabled("local experimentation")
+  public void lengthSampleForRandomGeneration() {
+    for (int i = 1; i < 65; i++) {
       var t = RandUtils.generateNewToken(i);
       log.debug("iteration: {}, bits: {}, length: {}, token: {}", i, i * 8, t.length(), t);
     }
