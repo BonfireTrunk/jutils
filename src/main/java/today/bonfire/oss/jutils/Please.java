@@ -73,4 +73,18 @@ public class Please {
       finallyFunc.run();
     }
   }
+
+  /**
+   * Executes a given Runnable and logs any exceptions that occur.
+   * useful if you want to try a task and not care if it fails.
+   *
+   * @param runnable the Runnable to be executed
+   */
+  public static void tryThis(Runnable runnable) {
+    try {
+      runnable.run();
+    } catch (Exception e) {
+      log.error("Exception occurred", e);
+    }
+  }
 }
