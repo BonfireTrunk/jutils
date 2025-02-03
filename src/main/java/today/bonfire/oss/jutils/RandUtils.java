@@ -4,10 +4,11 @@ import com.google.common.io.BaseEncoding;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Locale;
 
 /**
  * Utility class for generating random numbers, tokens, and IDs.
@@ -49,13 +50,16 @@ public class RandUtils {
 
   private static final SecureRandom   secureRandom         = new SecureRandom();
   private static final Base64.Encoder BASE64ENCODER_NOPADD = Base64.getUrlEncoder().withoutPadding();
+  private static final BaseEncoding base32Encoding = BaseEncoding.base32().omitPadding().lowerCase();
 
   /**
    * Returns a random {@code int} value between the specified origin (inclusive) and bound (exclusive).
    *
    * @param start the least value returned
    * @param bound the upper bound (excluded)
+   *
    * @return a random {@code int} value between the origin (inclusive) and the bound (exclusive)
+   *
    * @throws IllegalArgumentException if bound is not greater than start
    */
   public static int newInt(int start, int bound) {
@@ -70,7 +74,9 @@ public class RandUtils {
    *
    * @param start the least value returned
    * @param bound the upper bound (excluded)
+   *
    * @return a random {@code long} value between the origin (inclusive) and the bound (exclusive)
+   *
    * @throws IllegalArgumentException if bound is not greater than start
    */
   public static long newLong(long start, long bound) {
@@ -93,7 +99,9 @@ public class RandUtils {
    * string of 24 chars
    *
    * @param byteLength length of byte array
+   *
    * @return base64 URL encoded random string
+   *
    * @throws IllegalArgumentException if byteLength is not positive
    */
   public static String generateNewToken(int byteLength) {
@@ -107,7 +115,9 @@ public class RandUtils {
    * Generates a byte array of the specified length.
    *
    * @param byteLength length of byte array
+   *
    * @return byte array of the specified length
+   *
    * @throws IllegalArgumentException if byteLength is not positive
    */
   public static byte[] generateByteArray(int byteLength) {
@@ -123,6 +133,7 @@ public class RandUtils {
    * Generates a nano ID using the default 62-character alphabet.
    *
    * @param size the length of the nano ID to be generated
+   *
    * @return a nano ID of the specified length
    */
   public static String nanoId62(int size) {
@@ -131,13 +142,16 @@ public class RandUtils {
 
   /**
    * Generates a nano ID using the specified alphabet.
+   * this maynot be having a very uniform distribution but is very fast.
    *
    * @param alphabet the alphabet to use for the nano ID
    * @param size     the length of the nano ID to be generated
+   *
    * @return a nano ID of the specified length
+   *
    * @throws IllegalArgumentException if alphabet is null or empty, or if size is not positive
    */
-  public static String nanoId(final char[] alphabet, final int size) {
+  public static String nanoIdFast(final char[] alphabet, final int size) {
     if (alphabet == null || alphabet.length == 0) {
       throw new IllegalArgumentException("alphabet must not be null or empty");
     }
@@ -157,24 +171,55 @@ public class RandUtils {
     return new String(res);
   }
 
+
+  /**
+   * Generates a nano ID using the specified alphabet with a more uniform distribution but is slower.
+   *
+   * @param alphabet the alphabet to use for the nano ID
+   * @param size     the length of the nano ID to be generated
+   *
+   * @return a nano ID of the specified length
+   *
+   * @throws IllegalArgumentException if alphabet is null or empty, or if size is not positive
+   */
+  public static String nanoId(final char[] alphabet, final int size) {
+    if (alphabet == null || alphabet.length == 0) {
+      throw new IllegalArgumentException("alphabet must not be null or empty");
+    }
+    if (size <= 0) {
+      throw new IllegalArgumentException("size must be positive");
+    }
+    StringBuilder result         = new StringBuilder(size);
+    int           alphabetLength = alphabet.length;
+
+    for (int i = 0; i < size; i++) {
+      double randomDouble = secureRandom.nextDouble();
+      int    index        = (int) (randomDouble * alphabetLength); // Scale to alphabet index range
+      result.append(alphabet[index]);
+    }
+    return result.toString();
+  }
+
   /**
    * Generates a word-safe nano ID.
    *
    * @param size the length of the nano ID to be generated
+   *
    * @return a word-safe nano ID of the specified length
    */
   public static String nanoIdWordSafe(int size) {
-    return nanoId(WORDSAFE_ALPHABET_32, size);
+    return nanoIdFast(WORDSAFE_ALPHABET_32, size);
   }
 
   /**
    * Generates a case-insensitive nano ID.
    *
    * @param size the length of the nano ID to be generated
+   *
    * @return a case-insensitive nano ID of the specified length
    */
   public static String nanoIdCaseInsensitive(int size) {
-    return nanoId(CI_ALPHABET_32, size);
+    return nanoIdFast(CI_ALPHABET_32, size);
   }
 
   /**
@@ -185,7 +230,7 @@ public class RandUtils {
   public static String genBucketName() {
     byte[] bytes = new byte[20];
     secureRandom.nextBytes(bytes);
-    return BaseEncoding.base32().omitPadding().lowerCase().encode(bytes);
+    return base32Encoding.encode(bytes);
   }
 
   /**
@@ -201,41 +246,48 @@ public class RandUtils {
    * Generates a nano ID using the default 64-character alphabet.
    *
    * @param size the length of the nano ID to be generated
+   *
    * @return a nano ID of the specified length
    */
-  public static String nanoId(final int size) {
-    return nanoId(DEFAULT_ALPHABET_64, size);
+  public static String nanoIdFast(final int size) {
+    return nanoIdFast(DEFAULT_ALPHABET_64, size);
   }
 
   /**
    * Generates a timestamp-based unique ID (TUID).
-   * Instant + uniqueValue, 9 chars + 16 chars.
-   * Time + 96bits of random stuff should be better than UUID for all practical use cases.
+   * This is similar to ulid or UUIDv7
+   * timestamp (48 bits) + uniqueValue (80), 26chars(10+16).
+   *
    * The timestamp should be in a sortable manner, but not within the same millisecond.
    *
-   * @return 29chars of random data
+   * @return 26chars of random data
    */
   public static String tuid() {
-    return tuid(12);
+    return tuid(10);
   }
 
   /**
    * Generates a timestamp-based unique ID (TUID) with the specified size.
    *
-   * @param size the size of the TUID to be generated
+   * @param size the byte count of the random part of TUID to be generated
+   *
    * @return a TUID of the specified size
+   *
    * @throws IllegalArgumentException if size is not positive
    */
   public static String tuid(int size) {
-    var time = time();
-    var rand = BaseEncoding.base32().omitPadding().encode(generateByteArray(size));
-    return time.toUpperCase(Locale.ROOT) + rand;
+    var e = new byte[6 + size];
+    var b = ByteBuffer.allocate(8 + size)
+                      .putLong(System.currentTimeMillis())
+                      .put(RandUtils.generateByteArray(size));
+    b.get(2, e);
+    return base32Encoding.encode(e);
   }
 
   /**
-   * Returns the current time in a sortable format.
+   * Returns the current time in milliseconds in a efficient in a sortable format.
    */
   public static String time() {
-    return Long.toString(Instant.now().toEpochMilli(), 32);
+    return base32Encoding.encode(BigInteger.valueOf(Instant.now().toEpochMilli()).toByteArray());
   }
 }
