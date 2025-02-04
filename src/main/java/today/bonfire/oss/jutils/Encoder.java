@@ -26,10 +26,14 @@ public class Encoder {
                                                                       .omitPadding()
                                                                       .lowerCase();
 
+  private static final char[] BASE32_CHARS = "0123456789ABCDEFGHJKMNPQRSTVWXYZ".toCharArray();
+
+
   /**
    * Encodes a URL string using UTF-8 encoding.
    *
    * @param value the string to URL encode, may be null or blank
+   *
    * @return the URL encoded string, or the original string if input is null or blank
    */
   public static String urlEncode(String value) {
@@ -40,6 +44,7 @@ public class Encoder {
    * Decodes a URL encoded string using UTF-8 encoding.
    *
    * @param value the string to URL decode, may be null or blank
+   *
    * @return the URL decoded string, or the original string if input is null or blank
    */
   public static String urlDecode(String value) {
@@ -51,6 +56,7 @@ public class Encoder {
    * Uses JSoup's {@link Cleaner} with {@link Safelist#none()} for strict cleaning.
    *
    * @param value the string containing HTML to escape, may be null
+   *
    * @return the cleaned string with all HTML removed, or null if input is null
    */
   public static String htmlSafe(String value) {
@@ -64,6 +70,7 @@ public class Encoder {
    * characters, making it safe for use in URLs and filenames.
    *
    * @param s the string to encode, may be null or blank
+   *
    * @return the Base64 URL-safe encoded string, or null if input is null
    */
   public static String toBase64String(String s) {
@@ -76,6 +83,7 @@ public class Encoder {
    * characters, making it safe for use in URLs and filenames.
    *
    * @param bytes the byte array to encode, may be null
+   *
    * @return the Base64 URL-safe encoded string, or null if input is null
    */
   public static String toBase64(byte[] bytes) {
@@ -87,6 +95,7 @@ public class Encoder {
    * Encodes a string to standard Base64 format.
    *
    * @param s the string to encode, may be null or blank
+   *
    * @return the Base64 encoded string, or null if input is null
    */
   public static String toBase64Basic(String s) {
@@ -98,6 +107,7 @@ public class Encoder {
    * Encodes a byte array to Base32 format without padding.
    *
    * @param bytes the byte array to encode, may be null
+   *
    * @return the Base32 encoded string, or null if input is null
    */
   public static String toBase32(byte[] bytes) {
@@ -109,6 +119,7 @@ public class Encoder {
    * Encodes a string to Base32 format without padding.
    *
    * @param s the string to encode, may be null
+   *
    * @return the Base32 encoded string, or null if input is null
    */
   public static String toBase32(String s) {
@@ -120,6 +131,7 @@ public class Encoder {
    * Encodes a byte array to Base16 (hexadecimal) format.
    *
    * @param bytes the byte array to encode, may be null
+   *
    * @return the Base16 encoded string, or null if input is null
    */
   public static String toBase16(byte[] bytes) {
@@ -131,7 +143,9 @@ public class Encoder {
    * Converts a string to a byte array using UTF-8 encoding.
    *
    * @param value the string to convert, must not be null
+   *
    * @return the byte array representation of the string
+   *
    * @throws NullPointerException if value is null
    */
   public static byte[] toByteArray(String value) {
@@ -142,6 +156,7 @@ public class Encoder {
    * Decodes a Base64 URL-safe string.
    *
    * @param data the Base64 URL-safe string to decode, may be null or blank
+   *
    * @return the decoded string, or null if input is null or blank
    */
   public static String decodeBase64(String data) {
@@ -154,6 +169,7 @@ public class Encoder {
    * and includes line breaks after every 76 characters for better compatibility with email systems.
    *
    * @param data the Base64 MIME string to decode, may be null or blank
+   *
    * @return the decoded string, or null if input is null or blank
    */
   public static String decodeBase64Mime(String data) {
@@ -167,6 +183,7 @@ public class Encoder {
    * systems that have line length limitations.
    *
    * @param data the string to encode, may be null
+   *
    * @return the Base64 MIME encoded string with line breaks, or null if input is null
    */
   public static String encodeBase64Mime(String data) {
@@ -180,6 +197,7 @@ public class Encoder {
    * systems that have line length limitations.
    *
    * @param data the byte array to encode, may be null
+   *
    * @return the Base64 MIME encoded string with line breaks, or null if input is null
    */
   public static String encodeBase64Mime(byte[] data) {
@@ -191,11 +209,81 @@ public class Encoder {
    * Returns a string representation of the input byte array.
    *
    * @param bytes the input byte array
+   *
    * @return a string representation of the input byte array, or null if the input array is empty
    */
   public static String toStr(byte[] bytes) {
     if (ObjectUtils.isEmpty(bytes)) return null;
     return new String(bytes, StandardCharsets.UTF_8);
   }
+
+
+  public static String toBase32Lex(byte[] inputBytes) {
+    if (inputBytes == null) return null;
+
+    StringBuilder encodedString = new StringBuilder();
+    int           inputLength   = inputBytes.length;
+
+    // 1. Process full 5-byte chunks
+    final var modVal             = inputLength % 5;
+    int       fullChunksEndIndex = inputLength - modVal;
+    for (int i = 0; i < fullChunksEndIndex; i += 5) {
+      int currentByte          = inputBytes[i] & 0xFF;
+      int nextByte             = inputBytes[i + 1] & 0xFF;
+      int nextNextByte         = inputBytes[i + 2] & 0xFF;
+      int nextNextNextByte     = inputBytes[i + 3] & 0xFF;
+      int nextNextNextNextByte = inputBytes[i + 4] & 0xFF;
+
+      encodedString.append(BASE32_CHARS[(currentByte >> 3) & 0x1F]);
+      encodedString.append(BASE32_CHARS[((currentByte << 2) | (nextByte >> 6)) & 0x1F]);
+      encodedString.append(BASE32_CHARS[(nextByte >> 1) & 0x1F]);
+      encodedString.append(BASE32_CHARS[((nextByte << 4) | (nextNextByte >> 4)) & 0x1F]);
+      encodedString.append(BASE32_CHARS[((nextNextByte << 1) | (nextNextNextByte >> 7)) & 0x1F]);
+      encodedString.append(BASE32_CHARS[(nextNextNextByte >> 2) & 0x1F]);
+      encodedString.append(BASE32_CHARS[((nextNextNextByte << 3) | (nextNextNextNextByte >> 5)) & 0x1F]);
+      encodedString.append(BASE32_CHARS[nextNextNextNextByte & 0x1F]);
+    }
+
+    // 2. Handle remaining bytes (less than 5)
+    if (modVal > 0) {
+      int i                = fullChunksEndIndex; // Start from the index after full chunks
+      int currentByte      = (i < inputLength) ? (inputBytes[i++] & 0xFF) : 0;
+      int nextByte         = (i < inputLength) ? (inputBytes[i++] & 0xFF) : 0;
+      int nextNextByte     = (i < inputLength) ? (inputBytes[i++] & 0xFF) : 0;
+      int nextNextNextByte = (i < inputLength) ? (inputBytes[i++] & 0xFF) : 0;
+
+      switch (modVal) {
+        case 1 -> {
+          encodedString.append(BASE32_CHARS[(currentByte >> 3) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((currentByte << 2)) & 0x1F]);
+        }
+        case 2 -> {
+          encodedString.append(BASE32_CHARS[(currentByte >> 3) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((currentByte << 2) | (nextByte >> 6)) & 0x1F]);
+          encodedString.append(BASE32_CHARS[(nextByte >> 1) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((nextByte << 4)) & 0x1F]);
+        }
+        case 3 -> {
+          encodedString.append(BASE32_CHARS[(currentByte >> 3) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((currentByte << 2) | (nextByte >> 6)) & 0x1F]);
+          encodedString.append(BASE32_CHARS[(nextByte >> 1) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((nextByte << 4) | (nextNextByte >> 4)) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((nextNextByte << 1)) & 0x1F]);
+        }
+        case 4 -> {
+          encodedString.append(BASE32_CHARS[(currentByte >> 3) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((currentByte << 2) | (nextByte >> 6)) & 0x1F]);
+          encodedString.append(BASE32_CHARS[(nextByte >> 1) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((nextByte << 4) | (nextNextByte >> 4)) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((nextNextByte << 1) | (nextNextNextByte >> 7)) & 0x1F]);
+          encodedString.append(BASE32_CHARS[(nextNextNextByte >> 2) & 0x1F]);
+          encodedString.append(BASE32_CHARS[((nextNextNextByte << 3)) & 0x1F]);
+        }
+      }
+    }
+
+    return encodedString.toString();
+  }
+
 
 }

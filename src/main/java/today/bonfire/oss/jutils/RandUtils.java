@@ -130,10 +130,10 @@ public class RandUtils {
    * @throws IllegalArgumentException if byteLength is not positive
    */
   public static byte[] generateByteArray(int byteLength) {
-    if (byteLength <= 0) {
+    if (byteLength < 0) {
       throw new IllegalArgumentException("byteLength must be positive");
     }
-    byte[] randomBytes = new byte[byteLength];
+    var randomBytes = new byte[byteLength];
     secureRandom.nextBytes(randomBytes);
     return randomBytes;
   }
@@ -312,7 +312,7 @@ public class RandUtils {
                       .putLong(System.currentTimeMillis())
                       .put(RandUtils.generateByteArray(size));
     b.get(2, e);
-    return base32 ? base32Encoding.encode(e) : BASE64ENCODER_NOPADD.encodeToString(e);
+    return base32 ? Encoder.toBase32Lex(e) : BASE64ENCODER_NOPADD.encodeToString(e);
   }
 
   /**
