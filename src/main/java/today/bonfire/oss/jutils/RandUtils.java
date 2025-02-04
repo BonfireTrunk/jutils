@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
@@ -48,9 +49,17 @@ public class RandUtils {
    */
   private static final char[] CI_ALPHABET_32 = "23456789abcdefghijklmnpqrstvwxyz".toCharArray();
 
-  private static final SecureRandom   secureRandom         = new SecureRandom();
+  private static final SecureRandom secureRandom;
   private static final Base64.Encoder BASE64ENCODER_NOPADD = Base64.getUrlEncoder().withoutPadding();
   private static final BaseEncoding base32Encoding = BaseEncoding.base32().omitPadding().lowerCase();
+
+  static {
+    try {
+      secureRandom = SecureRandom.getInstanceStrong();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   /**
    * Returns a random {@code int} value between the specified origin (inclusive) and bound (exclusive).
@@ -257,7 +266,7 @@ public class RandUtils {
    * Generates a timestamp-based unique ID (TUID).
    * This is similar to ulid or UUIDv7
    * timestamp (48 bits) + uniqueValue (80), 26chars(10+16).
-   *
+   * <p>
    * The timestamp should be in a sortable manner, but not within the same millisecond.
    *
    * @return 26chars of random data
