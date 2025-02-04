@@ -272,7 +272,7 @@ public class RandUtils {
    * @return 26chars of random data
    */
   public static String tuid() {
-    return tuid(10);
+    return tuid(10, true);
   }
 
   /**
@@ -285,12 +285,34 @@ public class RandUtils {
    * @throws IllegalArgumentException if size is not positive
    */
   public static String tuid(int size) {
+    return tuid(size, false);
+  }
+
+
+  /**
+   * Generates a timestamp-based unique ID (TUID) with the specified size.
+   *
+   * <p>
+   * The timestamp would be in a sortable manner, but not within the same millisecond.
+   * <p>
+   *
+   * @param size   the size of the random part of TUID to be generated
+   * @param base32 if true, the generated TUID is in base32, else in base64
+   *
+   * @return a TUID of the specified size
+   *
+   * @throws IllegalArgumentException if size is not positive
+   */
+  public static String tuid(int size, boolean base32) {
+    if (size < 0) {
+      throw new IllegalArgumentException("size must be greater than 0");
+    }
     var e = new byte[6 + size];
     var b = ByteBuffer.allocate(8 + size)
                       .putLong(System.currentTimeMillis())
                       .put(RandUtils.generateByteArray(size));
     b.get(2, e);
-    return base32Encoding.encode(e);
+    return base32 ? base32Encoding.encode(e) : BASE64ENCODER_NOPADD.encodeToString(e);
   }
 
   /**
