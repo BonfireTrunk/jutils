@@ -149,7 +149,7 @@ public class GetValid {
                       .codePoints()
                       .limit(MAX_SLUG_LENGTH)
                       .map(cp -> {
-                        if (Character.isLetterOrDigit(cp) || Character.isSpaceChar(cp)) {
+                        if (Character.isLetterOrDigit(cp)) {
                           return cp;
                         } else {
                           return 45;  // Code point for '-'
