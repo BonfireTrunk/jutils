@@ -262,6 +262,27 @@ public class RandUtils {
     return nanoIdFast(DEFAULT_ALPHABET_64, size);
   }
 
+
+  /**
+   * Simulates rolling a six-sided die a specified number of times and returns the concatenated result as an integer.
+   *
+   * @param times the number of times to roll the die; must be positive.
+   *
+   * @return an integer formed by concatenating the results of each die roll.
+   *
+   * @throws IllegalArgumentException if {@code times} is less than or equal to zero.
+   */
+  public static int diceRolls(int times) {
+    if (times <= 0) {
+      throw new IllegalArgumentException("times must be positive");
+    }
+    StringBuilder sum = new StringBuilder();
+    for (int i = 0; i < times; i++) {
+      sum.append(secureRandom.nextInt(1, 7));
+    }
+    return Integer.parseInt(sum.toString());
+  }
+
   /**
    * Generates a timestamp-based unique ID (TUID).
    * This is similar to ulid or UUIDv7

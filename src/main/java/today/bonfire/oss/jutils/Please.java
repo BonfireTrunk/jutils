@@ -16,7 +16,7 @@ public class Please {
    * @param runnable the Runnable to be executed
    * @return a boolean indicating whether an exception was thrown
    */
-  public static boolean throwsException(Runnable runnable) {
+  public static boolean checkIfthrows(Runnable runnable) {
     try {
       runnable.run();
       return false;
