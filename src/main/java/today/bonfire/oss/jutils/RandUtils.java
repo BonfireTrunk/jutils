@@ -268,11 +268,12 @@ public class RandUtils {
    *
    * @param times the number of times to roll the die; must be positive.
    *
-   * @return an integer formed by concatenating the results of each die roll.
+   * @return a number formed by concatenating the results of each die roll.
+   *   but returned as a string. You can convert it to an int/long/bigint if you want.
    *
    * @throws IllegalArgumentException if {@code times} is less than or equal to zero.
    */
-  public static int diceRolls(int times) {
+  public static String diceRolls(int times) {
     if (times <= 0) {
       throw new IllegalArgumentException("times must be positive");
     }
@@ -280,7 +281,7 @@ public class RandUtils {
     for (int i = 0; i < times; i++) {
       sum.append(secureRandom.nextInt(1, 7));
     }
-    return Integer.parseInt(sum.toString());
+    return sum.toString();
   }
 
   /**
