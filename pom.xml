@@ -7,11 +7,12 @@
   <parent>
     <groupId>today.bonfire.oss</groupId>
     <artifactId>bonfire-oss-parent</artifactId>
-    <version>1.1.2</version>
+    <version>1.1.11</version>
   </parent>
 
+  <groupId>today.bonfire.oss</groupId>
   <artifactId>jutils</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
 
 
   <name>${project.groupId}:${project.artifactId}</name>
@@ -46,9 +47,7 @@
   </scm>
 
   <properties>
-    <commons-lang3.version>3.17.0</commons-lang3.version>
-    <guava.version>33.3.0-jre</guava.version>
-    <jsoup.version>1.18.1</jsoup.version>
+    <module.name>bonfire.oss.jutils</module.name>
   </properties>
 
   <dependencies>
@@ -71,6 +70,30 @@
 
   <build>
     <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+            <manifestEntries>
+              <Automatic-Module-Name>${module.name}</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>bundle-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 

@@ -16,7 +16,7 @@ public class Please {
    * @param runnable the Runnable to be executed
    * @return a boolean indicating whether an exception was thrown
    */
-  public static boolean throwsException(Runnable runnable) {
+  public static boolean checkIfthrows(Runnable runnable) {
     try {
       runnable.run();
       return false;
@@ -71,6 +71,20 @@ public class Please {
       return exceptionFunc.apply(e);
     } finally {
       finallyFunc.run();
+    }
+  }
+
+  /**
+   * Executes a given Runnable and logs any exceptions that occur.
+   * useful if you want to try a task and not care if it fails.
+   *
+   * @param runnable the Runnable to be executed
+   */
+  public static void tryThis(Runnable runnable) {
+    try {
+      runnable.run();
+    } catch (Exception e) {
+      log.error("Exception occurred", e);
     }
   }
 }
