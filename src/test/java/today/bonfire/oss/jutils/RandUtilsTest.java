@@ -21,14 +21,14 @@ public class RandUtilsTest {
   }
 
   @Test
-  public void testTuidNotNull() {
+  public void testTuidnegative() {
     assertThatExceptionOfType(IllegalArgumentException.class)
-      .isThrownBy(() -> RandUtils.tuid(0));
+      .isThrownBy(() -> RandUtils.tuid(-1));
   }
 
   @Test
   public void testTuidLength() {
-    String tuid = RandUtils.tuid(12);
+    String tuid = RandUtils.tuid(12, true);
     assertThat(tuid.length()).isEqualTo(29);
   }
 
