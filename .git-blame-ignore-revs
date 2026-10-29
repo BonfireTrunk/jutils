@@ -1,0 +1,5 @@
+# Commits that only reformat code. GitHub's blame view skips them; locally, run
+# git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Move to bonfire-oss-parent 2.1.0 and format with palantir-java-format (#6)
+da2b38c65f47896c01d3322473dce5bfad229313
