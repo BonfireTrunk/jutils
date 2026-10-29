@@ -1,6 +1,5 @@
 package today.bonfire.oss.jutils.constants;
 
-
 /**
  * Defines constants for accessing items in an ordered collection.
  *
@@ -17,19 +16,19 @@ package today.bonfire.oss.jutils.constants;
  */
 public class ArrayItem {
 
-  public static final int FIRST   = 0;
-  public static final int SECOND  = 1;
-  public static final int THIRD   = 2;
-  public static final int FOURTH  = 3;
-  public static final int FIFTH   = 4;
-  public static final int SIXTH   = 5;
-  public static final int SEVENTH = 6;
-  public static final int EIGHTH  = 7;
-  public static final int NINTH   = 8;
-  public static final int TENTH   = 9;
+    public static final int FIRST = 0;
+    public static final int SECOND = 1;
+    public static final int THIRD = 2;
+    public static final int FOURTH = 3;
+    public static final int FIFTH = 4;
+    public static final int SIXTH = 5;
+    public static final int SEVENTH = 6;
+    public static final int EIGHTH = 7;
+    public static final int NINTH = 8;
+    public static final int TENTH = 9;
 
-  // Private constructor to prevent instantiation
-  private ArrayItem() {
-    throw new AssertionError("ArrayItem class should not be instantiated.");
-  }
+    // Private constructor to prevent instantiation
+    private ArrayItem() {
+        throw new AssertionError("ArrayItem class should not be instantiated.");
+    }
 }
