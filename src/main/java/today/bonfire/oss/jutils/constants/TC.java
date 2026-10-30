@@ -8,7 +8,10 @@ package today.bonfire.oss.jutils.constants;
  * and do not account for leap years. For more precise time calculations involving
  * years, leap years need to be considered separately.
  */
-public class TC {
+public final class TC {
+
+    private TC() {}
+
     public static final long _10_YEARS = 315360000; // 60 * 60 * 24 * 365 * 10
     public static final long _5_YEARS = 157680000; // 60 * 60 * 24 * 365 * 5
     public static final long _3_YEARS = 94608000; // 60 * 60 * 24 * 365 * 3

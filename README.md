@@ -6,11 +6,30 @@ Common utilities for Java applications, collected from what we use repeatedly in
 <dependency>
     <groupId>today.bonfire.oss</groupId>
     <artifactId>jutils</artifactId>
-    <version>1.3.0</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
 Changes in each release are listed in the [changelog](CHANGELOG.md).
+
+## What's in it
+
+| Class | What it does |
+|---|---|
+| `Encoder` | URL and HTML escaping; Base64 (URL-safe, standard, MIME, sortable), Base32 (RFC 4648, sortable) and hex, both ways |
+| `Digest` | SHA-2, SHA-3 and HMAC digests as bytes, hex, Base64 or Base32, HMAC signature checks, and constant-time comparison |
+| `RandUtils` | Secure random numbers, tokens, nano IDs, sortable time-based IDs (TUIDs) and passphrases |
+| `BitSetHelpers` | `BitSet` to and from Base64 |
+| `Please` | Runs code that may throw, without a try/catch block |
+| `helpers.GetValid` | Sanitizes file names, slugs, tags, hashtags, usernames, URLs, locales and time zones |
+| `helpers.Is` | Checks emails, hex colours, DNS labels and empty JSON |
+| `parallel.Run`, `Contexts`, `ContextExecutors` | Runs tasks in parallel with a timeout, carrying a `Context` and the SLF4J MDC across threads |
+| `web.QueryParams`, `web.HttpStatus` | Parses and builds query strings, and classifies HTTP status codes |
+| `constants` | Time (`TC`) and separator (`CC`) constants, hash and HMAC algorithms, and country and continent codes |
+
+Every package is `@NullMarked` with [JSpecify](https://jspecify.dev): parameters and return values are non-null unless annotated `@Nullable`.
+
+`RandUtils.passphrase` uses a word list adapted from the EFF Large Wordlist, and `CountryCode` is built from GeoNames data. Both are licensed under Creative Commons Attribution; see [NOTICE](NOTICE).
 
 ## Contributing
 

@@ -12,46 +12,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 class IsTest {
 
     @Nested
-    @DisplayName("True method tests")
-    class TrueTests {
-        @Test
-        @DisplayName("Should return true only for Boolean.TRUE")
-        void shouldReturnTrueOnlyForBooleanTrue() {
-            assertThat(Is.True(Boolean.TRUE)).isTrue();
-            assertThat(Is.True(Boolean.FALSE)).isFalse();
-            assertThat(Is.True(null)).isFalse();
-            assertThat(Is.True(true)).isTrue(); // primitive boolean wrapped to new Boolean
-        }
-    }
-
-    @Nested
-    @DisplayName("False method tests")
-    class FalseTests {
-        @Test
-        @DisplayName("Should return true only for Boolean.FALSE")
-        void shouldReturnTrueOnlyForBooleanFalse() {
-            assertThat(Is.False(Boolean.FALSE)).isTrue();
-            assertThat(Is.False(Boolean.TRUE)).isFalse();
-            assertThat(Is.False(null)).isFalse();
-            assertThat(Is.False(false)).isTrue(); // primitive boolean wrapped to new Boolean
-        }
-    }
-
-    @Nested
-    @DisplayName("Falsy method tests")
-    class FalsyTests {
-        @Test
-        @DisplayName("Should return true for null and Boolean.FALSE")
-        void shouldReturnTrueForNullAndFalse() {
-            assertThat(Is.Falsy(null)).isTrue();
-            assertThat(Is.Falsy(Boolean.FALSE)).isTrue();
-            assertThat(Is.Falsy(false)).isTrue();
-            assertThat(Is.Falsy(Boolean.TRUE)).isFalse();
-            assertThat(Is.Falsy(true)).isFalse();
-        }
-    }
-
-    @Nested
     @DisplayName("jsonBlank method tests")
     class JsonBlankTests {
         @ParameterizedTest
@@ -150,6 +110,32 @@ class IsTest {
             assertThat(Is.email(input)).isTrue();
         }
 
+        @Test
+        @DisplayName("Should accept an uppercase domain")
+        void shouldAcceptUppercaseDomain() {
+            assertThat(Is.email("a@EXAMPLE.COM")).isTrue();
+            assertThat(Is.email("user@Sub.Example.Com")).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should accept a 64 character local part and reject 65")
+        void shouldEnforceLocalPartLength() {
+            assertThat(Is.email("a".repeat(64) + "@example.com")).isTrue();
+            assertThat(Is.email("a".repeat(65) + "@example.com")).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should reject ampersand in the local part")
+        void shouldRejectAmpersand() {
+            assertThat(Is.email("a&b@example.com")).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should reject input with no at sign after the minimum length check")
+        void shouldRejectMissingAtSign() {
+            assertThat(Is.email("abcdef")).isFalse();
+        }
+
         @ParameterizedTest
         @NullAndEmptySource
         @ValueSource(
@@ -191,6 +177,17 @@ class IsTest {
         @DisplayName("Should return true for valid single word subdomains")
         void shouldReturnTrueForValidSubdomains(String input) {
             assertThat(Is.subDomain(input)).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should enforce the DNS label length boundaries")
+        void shouldEnforceLabelLength() {
+            assertThat(Is.subDomain("a")).isTrue();
+            assertThat(Is.subDomain("7")).isTrue();
+            assertThat(Is.subDomain("A".repeat(63))).isTrue();
+            assertThat(Is.subDomain("a".repeat(64))).isFalse();
+            assertThat(Is.subDomain("a" + "-".repeat(61) + "9")).isTrue();
+            assertThat(Is.subDomain("a\n")).isFalse();
         }
 
         @ParameterizedTest

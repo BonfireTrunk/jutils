@@ -1,6 +1,7 @@
 package today.bonfire.oss.jutils.parallel;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -9,14 +10,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
 
 @ExtendWith(MockitoExtension.class)
+@Timeout(30)
 class ContextAwareThreadFactoryTest {
 
     @Mock
@@ -24,7 +28,6 @@ class ContextAwareThreadFactoryTest {
 
     @Test
     void testThreadCreationWithContextAndMDC() throws InterruptedException {
-        // Setup
         when(delegateFactory.newThread(any(Runnable.class))).thenAnswer(inv -> {
             Runnable r = inv.getArgument(0);
             return new Thread(r);
@@ -39,33 +42,26 @@ class ContextAwareThreadFactoryTest {
         AtomicReference<Context<?>> threadContext = new AtomicReference<>();
         AtomicReference<Map<String, String>> threadMDC = new AtomicReference<>();
 
-        // Set parent thread context
-        ContextAwareThreadFactory.CONTEXT_THREAD_LOCAL.set(testContext);
         MDC.setContextMap(mdcData);
-
-        try {
-            // Create and run thread
+        try (var scope = Contexts.open(testContext)) {
             Thread thread = factory.newThread(() -> {
-                threadContext.set(ContextAwareThreadFactory.CONTEXT_THREAD_LOCAL.get());
+                threadContext.set(Contexts.current());
                 threadMDC.set(MDC.getCopyOfContextMap());
                 latch.countDown();
             });
             thread.start();
-            latch.await();
+            assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
-            // Verify
             verify(delegateFactory).newThread(any(Runnable.class));
             assertThat(threadContext.get()).isEqualTo(testContext);
             assertThat(threadMDC.get()).containsAllEntriesOf(mdcData);
         } finally {
-            ContextAwareThreadFactory.CONTEXT_THREAD_LOCAL.remove();
             MDC.clear();
         }
     }
 
     @Test
     void testThreadCreationWithoutContext() throws InterruptedException {
-        // Setup
         when(delegateFactory.newThread(any(Runnable.class))).thenAnswer(inv -> {
             Runnable r = inv.getArgument(0);
             return new Thread(r);
@@ -76,18 +72,21 @@ class ContextAwareThreadFactoryTest {
         AtomicReference<Context<?>> threadContext = new AtomicReference<>();
         AtomicReference<Map<String, String>> threadMDC = new AtomicReference<>();
 
-        // Create and run thread
         Thread thread = factory.newThread(() -> {
-            threadContext.set(ContextAwareThreadFactory.CONTEXT_THREAD_LOCAL.get());
+            threadContext.set(Contexts.current());
             threadMDC.set(MDC.getCopyOfContextMap());
             latch.countDown();
         });
         thread.start();
-        latch.await();
+        assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
-        // Verify
         verify(delegateFactory).newThread(any(Runnable.class));
         assertThat(threadContext.get()).isNull();
         assertThat(threadMDC.get()).isNull();
+    }
+
+    @Test
+    void testNullDelegateRejected() {
+        assertThatThrownBy(() -> new ContextAwareThreadFactory(null)).isInstanceOf(NullPointerException.class);
     }
 }

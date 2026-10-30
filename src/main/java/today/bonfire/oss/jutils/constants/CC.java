@@ -3,13 +3,18 @@ package today.bonfire.oss.jutils.constants;
 /**
  * Contains common character constants.
  */
-public class CC {
+public final class CC {
+
+    private CC() {}
 
     public static final String EMPTY_STRING = "";
 
     public static final class Separator {
+
+        private Separator() {}
+
         public static final String COLON = ":";
-        public static final String URL = "/";
+        public static final String SLASH = "/";
         public static final String DOT = ".";
         public static final String US = "_";
         public static final String DASH = "-";

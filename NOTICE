@@ -1,0 +1,20 @@
+jutils
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes the following third-party material.
+
+Passphrase word list
+  Used by: today.bonfire.oss.jutils.RandUtils#passphrase
+  File: today/bonfire/oss/jutils/passphrase_wordlist.txt
+  Licensed under Creative Commons Attribution 4.0, see https://creativecommons.org/licenses/by/4.0/
+  Adapted from the EFF Large Wordlist for Passphrases, https://www.eff.org/dice
+    Copyright Electronic Frontier Foundation, licensed under Creative Commons Attribution 4.0,
+    see https://www.eff.org/copyright
+  Changes: removed 987 words (hyphenated, profane or sensitive words, alcohol words and company
+  names) and added 1,403 common English words.
+
+GeoNames country information
+  Used by: today.bonfire.oss.jutils.constants.CountryCode
+  Source: https://download.geonames.org/export/dump/countryInfo.txt
+  Licensed under Creative Commons Attribution 4.0, see https://creativecommons.org/licenses/by/4.0/
+  Changes: selected fields only; postal code regular expressions corrected and anchored.

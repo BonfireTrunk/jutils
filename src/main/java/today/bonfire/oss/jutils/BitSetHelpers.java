@@ -3,14 +3,17 @@ package today.bonfire.oss.jutils;
 import java.util.Base64;
 import java.util.BitSet;
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Utility class for BitSet operations including Base64 encoding and decoding.
  */
-public class BitSetHelpers {
+public final class BitSetHelpers {
 
     private static final Base64.Decoder DECODER = Base64.getUrlDecoder();
     private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
+
+    private BitSetHelpers() {}
 
     /**
      * Encodes a BitSet to a Base64 string. Returns empty string for null or empty BitSet.
@@ -18,7 +21,7 @@ public class BitSetHelpers {
      * @param bitSet the BitSet to encode
      * @return empty string if BitSet is null or empty, Base64 encoded string otherwise
      */
-    public static String encode(BitSet bitSet) {
+    public static String encode(@Nullable BitSet bitSet) {
         if (bitSet == null || bitSet.isEmpty()) {
             return "";
         }
@@ -41,7 +44,7 @@ public class BitSetHelpers {
      * @return empty BitSet if input is blank, decoded BitSet otherwise
      * @throws IllegalArgumentException if input is not a valid Base64 string
      */
-    public static BitSet decode(String encoded) {
+    public static BitSet decode(@Nullable String encoded) {
         if (StringUtils.isBlank(encoded)) {
             return new BitSet();
         }
