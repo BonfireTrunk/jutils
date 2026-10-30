@@ -204,6 +204,32 @@ public class RandUtilsTest {
     }
 
     @Test
+    public void testNanoIdDistributionNonPowerOfTwo() {
+        for (int length : new int[] {3, 37, 100, 255}) {
+            var alphabet = new char[length];
+            for (int i = 0; i < length; i++) alphabet[i] = (char) (0x100 + i);
+            int samples = length * 2000;
+            var id = RandUtils.nanoId(alphabet, samples);
+            assertThat(id).hasSize(samples);
+            var counts = new HashMap<Character, Integer>();
+            for (char c : id.toCharArray()) counts.merge(c, 1, Integer::sum);
+            assertThat(counts).hasSize(length);
+            for (char c : alphabet) assertThat(counts.get(c)).isBetween(1500, 2500);
+        }
+    }
+
+    @Test
+    public void testNanoIdNonPowerOfTwoSizes() {
+        for (int length : new int[] {3, 37, 100, 255}) {
+            var alphabet = new char[length];
+            for (int i = 0; i < length; i++) alphabet[i] = (char) (0x100 + i);
+            for (int size : new int[] {1, 2, 1000}) {
+                assertThat(RandUtils.nanoId(alphabet, size)).hasSize(size);
+            }
+        }
+    }
+
+    @Test
     public void testNanoIdDistributionPowerOfTwo() {
         int samples = 64 * 2000;
         var counts = new HashMap<Character, Integer>();

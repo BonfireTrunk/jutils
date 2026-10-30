@@ -100,7 +100,9 @@ class GetValidTest {
         "en-US, en-US",
         "fr-FR, fr-FR",
         "de-DE, de-DE",
-        "en_US, en",
+        "en_US, en-US",
+        "fr_FR, fr-FR",
+        "zh_Hans_CN, zh-Hans-CN",
         "zh-CN-Hans, zh-CN",
         "'', en", // empty string case
         "Invalid/Locale, en",
@@ -221,6 +223,44 @@ class GetValidTest {
         assertThat(GetValid.urlSlug("Café Crème")).isEqualTo("café-crème");
     }
 
+    @ParameterizedTest
+    @CsvSource({"नमस्ते दुनिया, नमस्ते-दुनिया", "வணக்கம் உலகம், வணக்கம்-உலகம்"})
+    @DisplayName("urlSlug should preserve combining marks in words")
+    void urlSlugShouldPreserveCombiningMarks(String input, String expected) {
+        assertThat(GetValid.urlSlug(input)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"செல்வம்", "नमस्ते", "বাংলা", "का", "q\u0307", "a\u20dd", "\uD801\uDC28\uD834\uDD65"})
+    @DisplayName("slugs, usernames and hashtags should keep letters and all combining mark categories")
+    void shouldKeepCombiningMarks(String input) {
+        assertThat(GetValid.urlSlug(input, false)).isEqualTo(input);
+        assertThat(GetValid.username(input)).isEqualTo(input);
+        assertThat(GetValid.hashtag("#" + input)).isEqualTo(input);
+    }
+
+    @Test
+    @DisplayName("slugs, usernames and hashtags should normalize decomposed accents to NFC")
+    void shouldNormalizeDecomposedAccents() {
+        String input = "re\u0301sume\u0301 cafe\u0301";
+        assertThat(GetValid.urlSlug(input)).isEqualTo("résumé-café");
+        assertThat(GetValid.username(input)).isEqualTo("résumé_café");
+        assertThat(GetValid.hashtag("#" + input)).isEqualTo("résumécafé");
+        assertThat(GetValid.username("Jose\u0301", true)).matches("José_.{5}");
+        assertThat(GetValid.hashtag("#a😀b☃c©")).isEqualTo("abc");
+    }
+
+    @Test
+    @DisplayName("slug and hashtag limits should count code points after normalization")
+    void shouldCountNormalizedCodePoints() {
+        assertThat(GetValid.urlSlug("e\u0301".repeat(101))).isEqualTo("é".repeat(100));
+        assertThat(GetValid.hashtag("#" + "e\u0301".repeat(141))).isEqualTo("é".repeat(140));
+        assertThat(GetValid.urlSlug("\uD801\uDC28".repeat(101))).isEqualTo("\uD801\uDC28".repeat(100));
+        assertThat(GetValid.hashtag("#" + "\uD801\uDC28".repeat(141))).isEqualTo("\uD801\uDC28".repeat(140));
+        assertThat(GetValid.urlSlug("का".repeat(51))).isEqualTo("का".repeat(50));
+        assertThat(GetValid.hashtag("#" + "का".repeat(71))).isEqualTo("का".repeat(70));
+    }
+
     @Test
     @DisplayName("alphaNumeric should keep only ASCII letters and digits and return empty for null")
     void alphaNumericShouldKeepAscii() {
@@ -238,6 +278,31 @@ class GetValidTest {
         assertThat(GetValid.tagName(null)).isEmpty();
         assertThat(GetValid.tagName("a".repeat(150))).hasSize(100);
         assertThat(GetValid.tagName("a    b")).isEqualTo("a b");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"foo & bar, foo bar", "c++ / java-script, c java-script"})
+    @DisplayName("tagName should collapse spaces after removing special characters")
+    void tagNameShouldCollapseSpacesAfterRemoval(String input, String expected) {
+        assertThat(GetValid.tagName(input)).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("tagName should collapse whitespace and trim the result")
+    void tagNameShouldNormalizeWhitespace() {
+        assertThat(GetValid.tagName("foo\tbar\nbaz")).isEqualTo("foo bar baz");
+        assertThat(GetValid.tagName(" \tfoo\r\n\f\u000b & bar \t ")).isEqualTo("foo bar");
+        assertThat(GetValid.tagName(" \t\r\n ")).isEmpty();
+        assertThat(GetValid.tagName("`~!@#$%^&*()_|+=?;:'\",.<> {}[]\\/")).isEmpty();
+        assertThat(GetValid.tagName("a-b: c.d_")).isEqualTo("a-b cd");
+    }
+
+    @Test
+    @DisplayName("tagName should truncate by code point and trim again")
+    void tagNameShouldTruncateByCodePoint() {
+        assertThat(GetValid.tagName("a".repeat(99) + "😀z")).isEqualTo("a".repeat(99) + "😀");
+        assertThat(GetValid.tagName("😀".repeat(101))).isEqualTo("😀".repeat(100));
+        assertThat(GetValid.tagName("a".repeat(99) + " & z")).isEqualTo("a".repeat(99));
     }
 
     @Test
@@ -282,13 +347,52 @@ class GetValidTest {
     }
 
     @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "https://evil.com@good.com/",
+                "https://user:pass@x.com/",
+                "https://@x.com/",
+                "//user@例え.jp/path",
+                "user@good.com/",
+                "https://evil.com＠good.com/",
+                "https://例え.jp／other.com/",
+                "https://例え.jp：8443/",
+                "https://\u200D.jp/",
+                "https://a..例え.jp/",
+                "https://例え.jp:invalid/",
+                "https://exa_mple.com/",
+                "https://good.com%40evil.com/"
+            })
+    @DisplayName("httpUrlString should reject user info and invalid internationalized hosts")
+    void httpUrlStringShouldRejectUserInfoAndInvalidHosts(String input) {
+        assertThat(GetValid.httpUrlString(input)).isNull();
+    }
+
+    @Test
+    @DisplayName("httpUrlString should reject host labels longer than the IDN limit")
+    void httpUrlStringShouldRejectLongIdnLabel() {
+        assertThat(GetValid.httpUrlString("https://" + "例".repeat(64) + ".jp/")).isNull();
+        assertThat(GetValid.httpUrlString("https://" + "a".repeat(64) + ".com/"))
+                .isNull();
+    }
+
+    @ParameterizedTest
     @CsvSource({
         "HTTP://Example.com/x, HTTP://Example.com/x",
         "//example.com, https://example.com",
         "example.com/path, https://example.com/path",
         "'  https://example.com  ', https://example.com",
         "example.com:8080/x, https://example.com:8080/x",
-        "localhost:3000, https://localhost:3000"
+        "localhost:3000, https://localhost:3000",
+        "https://例え.jp/path, https://xn--r8jz45g.jp/path",
+        "//例え.jp/path, https://xn--r8jz45g.jp/path",
+        "例え.jp:8443/path, https://xn--r8jz45g.jp:8443/path",
+        "https://xn--r8jz45g.jp/path, https://xn--r8jz45g.jp/path",
+        "https://例え.jp:8443/a%2Fb/é?q=%26&x=値#f%20g, https://xn--r8jz45g.jp:8443/a%2Fb/é?q=%26&x=値#f%20g",
+        "https://例え.jp?x=1#part, https://xn--r8jz45g.jp?x=1#part",
+        "http://127.0.0.1:8080/x?q=1#part, http://127.0.0.1:8080/x?q=1#part",
+        "https://[::1]:8443/x, https://[::1]:8443/x",
+        "//[::1]/x?q=%2F#part, https://[::1]/x?q=%2F#part"
     })
     @DisplayName("httpUrlString should accept and normalize http(s) URLs")
     void httpUrlStringShouldAccept(String input, String expected) {

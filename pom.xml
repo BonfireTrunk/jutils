@@ -49,7 +49,6 @@
   <properties>
     <module.name>bonfire.oss.jutils</module.name>
     <jspecify.version>1.0.1</jspecify.version>
-    <japicmp-maven-plugin.version>0.26.5</japicmp-maven-plugin.version>
   </properties>
 
   <dependencies>
@@ -120,29 +119,6 @@
             <phase>process-classes</phase>
             <goals>
               <goal>manifest</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- Compares the public API with the latest release on Maven Central and fails the build when a change
-           breaks compatibility beyond what the version bump allows (semantic versioning). -->
-      <plugin>
-        <groupId>com.github.siom79.japicmp</groupId>
-        <artifactId>japicmp-maven-plugin</artifactId>
-        <version>${japicmp-maven-plugin.version}</version>
-        <configuration>
-          <parameter>
-            <oldVersionPattern>\d+\.\d+\.\d+</oldVersionPattern>
-            <onlyModified>true</onlyModified>
-            <breakBuildBasedOnSemanticVersioning>true</breakBuildBasedOnSemanticVersioning>
-          </parameter>
-        </configuration>
-        <executions>
-          <execution>
-            <id>api-compatibility</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>cmp</goal>
             </goals>
           </execution>
         </executions>

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import today.bonfire.oss.jutils.constants.HashAlgorithm;
 import today.bonfire.oss.jutils.constants.HmacAlgorithm;
@@ -127,6 +128,180 @@ class DigestTest {
                 .isThrownBy(() -> Digest.hmac(HmacAlgorithm.HMAC_SHA_256, (byte[]) null, new byte[1]));
         assertThatExceptionOfType(NullPointerException.class)
                 .isThrownBy(() -> Digest.hmac(HmacAlgorithm.HMAC_SHA_256, new byte[1], (byte[]) null));
+    }
+
+    @Test
+    void verifyHmacRfc4231Vectors() {
+        assertThat(Digest.verifyHmac(
+                        HmacAlgorithm.HMAC_SHA_256,
+                        DATA.getBytes(StandardCharsets.UTF_8),
+                        "Jefe".getBytes(StandardCharsets.UTF_8),
+                        Encoder.fromBase16(HMAC256)))
+                .isTrue();
+        var key = new byte[20];
+        Arrays.fill(key, (byte) 0x0B);
+        assertThat(Digest.verifyHmac(
+                        HmacAlgorithm.HMAC_SHA_256,
+                        "Hi There".getBytes(StandardCharsets.UTF_8),
+                        key,
+                        Encoder.fromBase16("b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7")))
+                .isTrue();
+    }
+
+    @Test
+    void verifyHmacHexRfc4231Case2() {
+        assertThat(Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, DATA, "Jefe", HMAC256))
+                .isTrue();
+        assertThat(Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, DATA, "Jefe", HMAC256.toUpperCase()))
+                .isTrue();
+        assertThat(Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, DATA, "Jefe", " \t\n" + HMAC256 + "\n\t "))
+                .isTrue();
+    }
+
+    @Test
+    void verifyHmacBase64UrlRfc4231Case2() {
+        var signature = "W9zBRr9gdU5qBCQmCJV1x1oAPwidJzmDnexYuWTsOEM";
+        for (var expected :
+                new String[] {signature, signature + "=", " \t\n" + signature + "\n\t ", " \t\n" + signature + "=\n\t "
+                }) {
+            assertThat(Digest.verifyHmacBase64Url(HmacAlgorithm.HMAC_SHA_256, DATA, "Jefe", expected))
+                    .isTrue();
+        }
+    }
+
+    @Test
+    void verifyHmacBase64UrlAcceptsOnlyUrlAlphabet() {
+        var key = "\u000b".repeat(20);
+        assertThat(Digest.verifyHmacBase64Url(
+                        HmacAlgorithm.HMAC_SHA_256, "Hi There", key, "sDRMYdjbOFNcqK_OrwvxK4gdwgDJgz2nJuk3bC4yz_c="))
+                .isTrue();
+        assertThat(Digest.verifyHmacBase64Url(
+                        HmacAlgorithm.HMAC_SHA_256, "Hi There", key, "sDRMYdjbOFNcqK/OrwvxK4gdwgDJgz2nJuk3bC4yz/c="))
+                .isFalse();
+    }
+
+    @Test
+    void verifyHmacRejectsMismatchedSignatures() {
+        var data = DATA.getBytes(StandardCharsets.UTF_8);
+        var key = "Jefe".getBytes(StandardCharsets.UTF_8);
+        var expected = Encoder.fromBase16(HMAC256);
+        var changed = expected.clone();
+        changed[0] ^= 1;
+        for (var signature : new byte[][] {
+            changed,
+            Arrays.copyOf(expected, expected.length - 1),
+            Arrays.copyOf(expected, expected.length + 1),
+            Digest.hmac(HmacAlgorithm.HMAC_SHA_384, data, key),
+            null,
+            new byte[0]
+        }) {
+            assertThat(Digest.verifyHmac(HmacAlgorithm.HMAC_SHA_256, data, key, signature))
+                    .isFalse();
+            assertThat(Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, DATA, "Jefe", Encoder.toBase16(signature)))
+                    .isFalse();
+            assertThat(Digest.verifyHmacBase64Url(
+                            HmacAlgorithm.HMAC_SHA_256, DATA, "Jefe", Encoder.toBase64Url(signature)))
+                    .isFalse();
+        }
+        assertThat(Digest.verifyHmac(HmacAlgorithm.HMAC_SHA_384, data, key, expected))
+                .isFalse();
+    }
+
+    @Test
+    void verifyHmacRejectsWrongKey() {
+        var expected = Encoder.fromBase16(HMAC256);
+        assertThat(Digest.verifyHmac(
+                        HmacAlgorithm.HMAC_SHA_256,
+                        DATA.getBytes(StandardCharsets.UTF_8),
+                        "wrong".getBytes(StandardCharsets.UTF_8),
+                        expected))
+                .isFalse();
+        assertThat(Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, DATA, "wrong", HMAC256))
+                .isFalse();
+        assertThat(Digest.verifyHmacBase64Url(HmacAlgorithm.HMAC_SHA_256, DATA, "wrong", Encoder.toBase64Url(expected)))
+                .isFalse();
+    }
+
+    @Test
+    void verifyHmacRejectsMalformedSignatures() {
+        for (var signature : new String[] {
+            null,
+            "",
+            " \t\n",
+            "zz".repeat(32),
+            HMAC256.substring(1),
+            HMAC256.substring(0, 2) + " " + HMAC256.substring(2),
+            "sha256=" + HMAC256
+        }) {
+            assertThat(Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, DATA, "Jefe", signature))
+                    .isFalse();
+        }
+        for (var signature : new String[] {
+            null,
+            "",
+            " \t\n",
+            "!!",
+            "A",
+            "Zg===",
+            "AQ+_",
+            "AQ/_",
+            "AQ ==",
+            "sha256=W9zBRr9gdU5qBCQmCJV1x1oAPwidJzmDnexYuWTsOEM"
+        }) {
+            assertThat(Digest.verifyHmacBase64Url(HmacAlgorithm.HMAC_SHA_256, DATA, "Jefe", signature))
+                    .isFalse();
+        }
+    }
+
+    @Test
+    void verifyHmacAllowsEmptyDataAndUsesUtf8() {
+        for (var data : new String[] {"", "é"}) {
+            var expected = Digest.hmac(
+                    HmacAlgorithm.HMAC_SHA_256,
+                    data.getBytes(StandardCharsets.UTF_8),
+                    "clé".getBytes(StandardCharsets.UTF_8));
+            assertThat(Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, data, "clé", Encoder.toBase16(expected)))
+                    .isTrue();
+            assertThat(Digest.verifyHmacBase64Url(
+                            HmacAlgorithm.HMAC_SHA_256, data, "clé", Encoder.toBase64Url(expected)))
+                    .isTrue();
+        }
+    }
+
+    @Test
+    void verifyHmacInvalidArgumentsThrowEvenWithNullSignature() {
+        var data = DATA.getBytes(StandardCharsets.UTF_8);
+        var key = "Jefe".getBytes(StandardCharsets.UTF_8);
+        assertThatExceptionOfType(NullPointerException.class)
+                .isThrownBy(() -> Digest.verifyHmac(null, data, key, null));
+        assertThatExceptionOfType(NullPointerException.class)
+                .isThrownBy(() -> Digest.verifyHmac(HmacAlgorithm.HMAC_SHA_256, null, key, null));
+        assertThatExceptionOfType(NullPointerException.class)
+                .isThrownBy(() -> Digest.verifyHmac(HmacAlgorithm.HMAC_SHA_256, data, null, null));
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> Digest.verifyHmac(HmacAlgorithm.HMAC_SHA_256, data, new byte[0], null));
+    }
+
+    @Test
+    void verifyEncodedHmacInvalidArgumentsThrowRegardlessOfSignature() {
+        for (var signature : new String[] {HMAC256, null, "", "??"}) {
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> Digest.verifyHmacHex(null, DATA, "Jefe", signature));
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, null, "Jefe", signature));
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, DATA, null, signature));
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> Digest.verifyHmacHex(HmacAlgorithm.HMAC_SHA_256, DATA, "", signature));
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> Digest.verifyHmacBase64Url(null, DATA, "Jefe", signature));
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> Digest.verifyHmacBase64Url(HmacAlgorithm.HMAC_SHA_256, null, "Jefe", signature));
+            assertThatExceptionOfType(NullPointerException.class)
+                    .isThrownBy(() -> Digest.verifyHmacBase64Url(HmacAlgorithm.HMAC_SHA_256, DATA, null, signature));
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> Digest.verifyHmacBase64Url(HmacAlgorithm.HMAC_SHA_256, DATA, "", signature));
+        }
     }
 
     @Test

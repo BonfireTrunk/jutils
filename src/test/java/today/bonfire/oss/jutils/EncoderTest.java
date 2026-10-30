@@ -55,11 +55,43 @@ class EncoderTest {
     }
 
     @Test
+    void escapeHtmlReturnsUnchangedInputInstance() {
+        var plain = new String("Plain text with spaces, Unicode é, and digits 12345.");
+        assertThat(Encoder.escapeHtml(plain)).isSameAs(plain);
+        assertThat(Encoder.escapeHtml("")).isSameAs("");
+    }
+
+    @Test
+    void escapeHtmlPreservesPrefixBeforeEachEscapedCharacter() {
+        assertThat(Encoder.escapeHtml("prefix & suffix")).isEqualTo("prefix &amp; suffix");
+        assertThat(Encoder.escapeHtml("prefix < suffix")).isEqualTo("prefix &lt; suffix");
+        assertThat(Encoder.escapeHtml("prefix > suffix")).isEqualTo("prefix &gt; suffix");
+        assertThat(Encoder.escapeHtml("prefix \" suffix")).isEqualTo("prefix &quot; suffix");
+        assertThat(Encoder.escapeHtml("prefix ' suffix")).isEqualTo("prefix &#x27; suffix");
+    }
+
+    @Test
     void htmlToTextStripsTagsAndDecodesEntities() {
         assertThat(Encoder.htmlToText(null)).isNull();
         assertThat(Encoder.htmlToText("")).isEmpty();
         assertThat(Encoder.htmlToText("<p>Hello <b>world</b></p>")).isEqualTo("Hello world");
         assertThat(Encoder.htmlToText("&lt;img src=x onerror=alert(1)&gt;")).isEqualTo("<img src=x onerror=alert(1)>");
+    }
+
+    @Test
+    void htmlToTextSeparatesBlocksAndLineBreaks() {
+        assertThat(Encoder.htmlToText("<p>Hello</p><p>World</p>")).isEqualTo("Hello World");
+        assertThat(Encoder.htmlToText("line1<br>line2")).isEqualTo("line1 line2");
+        assertThat(Encoder.htmlToText("<ul><li>a</li><li>b</li></ul>")).isEqualTo("a b");
+    }
+
+    @Test
+    void htmlToTextExcludesHeadAndScriptContent() {
+        assertThat(Encoder.htmlToText("<html><head><title>Title</title></head><body>Body</body></html>"))
+                .isEqualTo("Body");
+        assertThat(Encoder.htmlToText("<title>Title</title>")).isEmpty();
+        assertThat(Encoder.htmlToText("<p>Hello</p><script>alert('hidden')</script><p>World</p>"))
+                .isEqualTo("Hello World");
     }
 
     @Test
@@ -136,6 +168,7 @@ class EncoderTest {
         assertThat(Encoder.toStr(Encoder.fromBase32("MZXW6YTBOI"))).isEqualTo("foobar");
         assertThat(Encoder.toStr(Encoder.fromBase32("MZXW6YQ="))).isEqualTo("foob");
         assertThat(Encoder.toStr(Encoder.fromBase32("MY======"))).isEqualTo("f");
+        assertThat(Encoder.toStr(Encoder.fromBase32(" \t\nMY======\n\t "))).isEqualTo("f");
     }
 
     @Test
@@ -266,6 +299,43 @@ class EncoderTest {
         assertThat(Encoder.fromBase16("000fABff")).isEqualTo(new byte[] {0, 15, (byte) 0xAB, (byte) 0xFF});
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> Encoder.fromBase16("abc"));
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> Encoder.fromBase16("zz"));
+    }
+
+    @Test
+    void decodersIgnoreSurroundingWhitespace() {
+        for (var whitespace : new String[] {" ", "\t", "\n", "\u2003", " \t\n"}) {
+            assertThat(Encoder.fromBase64Url(whitespace + "AQ==" + whitespace)).isEqualTo(new byte[] {1});
+            assertThat(Encoder.fromBase64Basic(whitespace + "AQ==" + whitespace))
+                    .isEqualTo(new byte[] {1});
+            assertThat(Encoder.fromBase32(whitespace + "MY======" + whitespace)).isEqualTo(new byte[] {'f'});
+            assertThat(Encoder.fromBase32Lex(whitespace + "S0" + whitespace)).isEqualTo(fixed(1));
+            assertThat(Encoder.fromBase64Lex(whitespace + "zk" + whitespace)).isEqualTo(new byte[] {(byte) 0xFF});
+            assertThat(Encoder.fromBase16(whitespace + "ab" + whitespace)).isEqualTo(new byte[] {(byte) 0xAB});
+            assertThat(Encoder.fromBase64Url(whitespace)).isEmpty();
+            assertThat(Encoder.fromBase64Basic(whitespace)).isEmpty();
+            assertThat(Encoder.fromBase32(whitespace)).isEmpty();
+            assertThat(Encoder.fromBase32Lex(whitespace)).isEmpty();
+            assertThat(Encoder.fromBase64Lex(whitespace)).isEmpty();
+            assertThat(Encoder.fromBase16(whitespace)).isEmpty();
+        }
+    }
+
+    @Test
+    void decodersRejectInnerWhitespace() {
+        for (var whitespace : new String[] {" ", "\t", "\n", "\u2003"}) {
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> Encoder.fromBase64Url("A" + whitespace + "Q=="));
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> Encoder.fromBase64Basic("A" + whitespace + "Q=="));
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> Encoder.fromBase32("M" + whitespace + "Y======"));
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> Encoder.fromBase32Lex("S" + whitespace + "0"));
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> Encoder.fromBase64Lex("z" + whitespace + "k"));
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> Encoder.fromBase16("a" + whitespace + "b"));
+        }
     }
 
     @Test

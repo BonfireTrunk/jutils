@@ -170,8 +170,8 @@ public final class RandUtils {
 
     /**
      * Generates a nano ID from the given alphabet. Each character is chosen uniformly: for an alphabet whose length
-     * is a power of two up to 256, random bytes are masked to the alphabet size; otherwise
-     * {@link SecureRandom#nextInt(int)} is used, which rejects biased values.
+     * is a power of two up to 256, random bytes are masked to the alphabet size; other lengths up to 256 use
+     * batched random bytes with rejection sampling. Longer alphabets use {@link SecureRandom#nextInt(int)}.
      *
      * @param alphabet the characters to choose from; characters may repeat, which weights them accordingly
      * @param size     the length of the nano ID to be generated
@@ -194,6 +194,21 @@ public final class RandUtils {
             var bytes = generateByteArray(size);
             for (int i = 0; i < size; i++) {
                 result[i] = alphabet[bytes[i] & mask];
+            }
+        } else if (length <= 256) {
+            int mask = (Integer.highestOneBit(length - 1) << 1) - 1;
+            int step = (int) Math.ceil(1.6 * mask * size / length);
+            var bytes = new byte[step];
+            int count = 0;
+            while (count < size) {
+                secureRandom.nextBytes(bytes);
+                for (byte b : bytes) {
+                    int index = b & mask;
+                    if (index < length) {
+                        result[count++] = alphabet[index];
+                        if (count == size) break;
+                    }
+                }
             }
         } else {
             for (int i = 0; i < size; i++) {
@@ -326,7 +341,8 @@ public final class RandUtils {
      * <p>IDs of the same size and encoding sort lexicographically by creation millisecond. The order within one
      * millisecond is random, so IDs are not monotonic.
      *
-     * @return a 26 character TUID (10 timestamp characters plus 16 random characters)
+     * @return a 26 character TUID; the first 9 characters contain timestamp bits, the 10th contains the last
+     *         3 timestamp bits and 2 random bits, and the remaining characters contain random bits
      */
     public static String tuid() {
         return tuid(10, true);

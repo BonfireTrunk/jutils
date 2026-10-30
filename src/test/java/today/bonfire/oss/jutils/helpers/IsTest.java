@@ -130,6 +130,12 @@ class IsTest {
             assertThat(Is.email("a&b@example.com")).isFalse();
         }
 
+        @Test
+        @DisplayName("Should reject input with no at sign after the minimum length check")
+        void shouldRejectMissingAtSign() {
+            assertThat(Is.email("abcdef")).isFalse();
+        }
+
         @ParameterizedTest
         @NullAndEmptySource
         @ValueSource(
@@ -171,6 +177,17 @@ class IsTest {
         @DisplayName("Should return true for valid single word subdomains")
         void shouldReturnTrueForValidSubdomains(String input) {
             assertThat(Is.subDomain(input)).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should enforce the DNS label length boundaries")
+        void shouldEnforceLabelLength() {
+            assertThat(Is.subDomain("a")).isTrue();
+            assertThat(Is.subDomain("7")).isTrue();
+            assertThat(Is.subDomain("A".repeat(63))).isTrue();
+            assertThat(Is.subDomain("a".repeat(64))).isFalse();
+            assertThat(Is.subDomain("a" + "-".repeat(61) + "9")).isTrue();
+            assertThat(Is.subDomain("a\n")).isFalse();
         }
 
         @ParameterizedTest

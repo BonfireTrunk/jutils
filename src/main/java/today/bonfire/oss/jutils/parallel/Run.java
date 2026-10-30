@@ -128,11 +128,8 @@ public final class Run {
             }
 
             for (var future : futures) {
-                results.add(future.get());
+                results.add(future.resultNow());
             }
-        } catch (ExecutionException e) {
-            cancelAll(futures);
-            throw new ParallelException("Task execution failed", e.getCause(), submitterContext);
         } catch (InterruptedException | RuntimeException e) {
             cancelAll(futures);
             throw e;

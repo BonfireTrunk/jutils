@@ -7,8 +7,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HexFormat;
 import org.jsoup.Jsoup;
-import org.jsoup.safety.Cleaner;
-import org.jsoup.safety.Safelist;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -61,7 +59,8 @@ public final class Encoder {
 
     /**
      * Escapes a string for use in HTML text and in quoted (single or double) attribute values. The characters
-     * {@code & < > " '} are replaced with {@code &amp; &lt; &gt; &quot; &#x27;}; everything else is unchanged.
+     * {@code & < > " '} are replaced with {@code &amp; &lt; &gt; &quot; &#x27;}; everything else is unchanged. If none
+     * of these five characters is present, the input string itself is returned.
      *
      * @param value the text to escape, may be null or empty
      *
@@ -69,8 +68,16 @@ public final class Encoder {
      */
     public static @Nullable String escapeHtml(@Nullable String value) {
         if (value == null) return null;
+        int start = 0;
+        while (start < value.length()) {
+            char c = value.charAt(start);
+            if (c == '&' || c == '<' || c == '>' || c == '"' || c == '\'') break;
+            start++;
+        }
+        if (start == value.length()) return value;
         var sb = new StringBuilder(value.length() + 16);
-        for (int i = 0; i < value.length(); i++) {
+        sb.append(value, 0, start);
+        for (int i = start; i < value.length(); i++) {
             char c = value.charAt(i);
             switch (c) {
                 case '&' -> sb.append("&amp;");
@@ -85,8 +92,8 @@ public final class Encoder {
     }
 
     /**
-     * Converts HTML to plain text: all tags are removed and entities are decoded. Uses JSoup's {@link Cleaner} with
-     * {@link Safelist#none()}.
+     * Converts HTML to plain text using JSoup's parsed body text. Tags are removed, entities are decoded, and block
+     * elements and {@code <br>} separate words with spaces. Head text and script content are excluded.
      *
      * <p>The result is plain text with entities decoded, so for example {@code &lt;b&gt;} becomes the characters
      * {@code <b>}. It is NOT safe to insert into HTML; use {@link #escapeHtml(String)} for that.
@@ -97,8 +104,7 @@ public final class Encoder {
      */
     public static @Nullable String htmlToText(@Nullable String value) {
         if (value == null) return null;
-        var cleaner = new Cleaner(Safelist.none());
-        return cleaner.clean(Jsoup.parse(value)).text();
+        return Jsoup.parse(value).body().text();
     }
 
     /**
@@ -127,10 +133,11 @@ public final class Encoder {
 
     /**
      * Decodes Base64 written with the URL-safe alphabet. Padding is optional and surrounding whitespace is ignored.
+     * Whitespace inside the input is rejected.
      *
-     * @param s the encoded string, may be null or empty
+     * @param s the encoded string, may be null, empty or blank
      *
-     * @return the decoded bytes (empty for an empty string), or null if {@code s} is null
+     * @return the decoded bytes (empty for an empty or blank string), or null if {@code s} is null
      *
      * @throws IllegalArgumentException if the input is not valid URL-safe Base64
      */
@@ -165,17 +172,18 @@ public final class Encoder {
     }
 
     /**
-     * Decodes Base64 written with the standard alphabet. Padding is optional.
+     * Decodes Base64 written with the standard alphabet. Padding is optional and surrounding whitespace is ignored.
+     * Whitespace inside the input is rejected.
      *
-     * @param s the encoded string, may be null or empty
+     * @param s the encoded string, may be null, empty or blank
      *
-     * @return the decoded bytes (empty for an empty string), or null if {@code s} is null
+     * @return the decoded bytes (empty for an empty or blank string), or null if {@code s} is null
      *
      * @throws IllegalArgumentException if the input is not valid standard Base64
      */
     public static byte @Nullable [] fromBase64Basic(@Nullable String s) {
         if (s == null) return null;
-        return BASE64_BASIC_DECODER.decode(s);
+        return BASE64_BASIC_DECODER.decode(s.strip());
     }
 
     /**
@@ -245,17 +253,18 @@ public final class Encoder {
 
     /**
      * Decodes Base32 (RFC 4648). Matching is case-insensitive and trailing {@code '='} padding is ignored.
+     * Surrounding whitespace is ignored before removing padding; whitespace inside the input is rejected.
      *
-     * @param s the encoded string, may be null or empty
+     * @param s the encoded string, may be null, empty or blank
      *
-     * @return the decoded bytes (empty for an empty string), or null if {@code s} is null
+     * @return the decoded bytes (empty for an empty or blank string), or null if {@code s} is null
      *
      * @throws IllegalArgumentException if the input contains a character outside the alphabet or has an impossible
      *                                  length (length without padding modulo 8 is 1, 3 or 6)
      */
     public static byte @Nullable [] fromBase32(@Nullable String s) {
         if (s == null) return null;
-        return decode(stripPadding(s), BASE32);
+        return decode(stripPadding(s.strip()), BASE32);
     }
 
     /**
@@ -274,18 +283,19 @@ public final class Encoder {
 
     /**
      * Decodes the output of {@link #toBase32Lex(byte[])}. Matching is case-insensitive; only the 32 alphabet
-     * characters are accepted (the Crockford aliases I, L and O are rejected).
+     * characters are accepted (the Crockford aliases I, L and O are rejected). Surrounding whitespace is ignored;
+     * whitespace inside the input is rejected.
      *
-     * @param s the encoded string, may be null or empty
+     * @param s the encoded string, may be null, empty or blank
      *
-     * @return the decoded bytes (empty for an empty string), or null if {@code s} is null
+     * @return the decoded bytes (empty for an empty or blank string), or null if {@code s} is null
      *
      * @throws IllegalArgumentException if the input contains a character outside the alphabet or has an impossible
      *                                  length (length modulo 8 is 1, 3 or 6)
      */
     public static byte @Nullable [] fromBase32Lex(@Nullable String s) {
         if (s == null) return null;
-        return decode(s, BASE32_LEX);
+        return decode(s.strip(), BASE32_LEX);
     }
 
     /**
@@ -304,18 +314,19 @@ public final class Encoder {
     }
 
     /**
-     * Decodes the output of {@link #toBase64Lex(byte[])}. Matching is case-sensitive.
+     * Decodes the output of {@link #toBase64Lex(byte[])}. Matching is case-sensitive. Surrounding whitespace is
+     * ignored; whitespace inside the input is rejected.
      *
-     * @param s the encoded string, may be null or empty
+     * @param s the encoded string, may be null, empty or blank
      *
-     * @return the decoded bytes (empty for an empty string), or null if {@code s} is null
+     * @return the decoded bytes (empty for an empty or blank string), or null if {@code s} is null
      *
      * @throws IllegalArgumentException if the input contains a character outside the alphabet or its length modulo 4
      *                                  is 1
      */
     public static byte @Nullable [] fromBase64Lex(@Nullable String s) {
         if (s == null) return null;
-        return decode(s, BASE64_LEX);
+        return decode(s.strip(), BASE64_LEX);
     }
 
     /**
@@ -331,17 +342,18 @@ public final class Encoder {
     }
 
     /**
-     * Decodes Base16 (hexadecimal) in either case.
+     * Decodes Base16 (hexadecimal) in either case. Surrounding whitespace is ignored; whitespace inside the input
+     * is rejected.
      *
-     * @param s the encoded string, may be null or empty
+     * @param s the encoded string, may be null, empty or blank
      *
-     * @return the decoded bytes (empty for an empty string), or null if {@code s} is null
+     * @return the decoded bytes (empty for an empty or blank string), or null if {@code s} is null
      *
      * @throws IllegalArgumentException if the length is odd or the input contains a non-hexadecimal character
      */
     public static byte @Nullable [] fromBase16(@Nullable String s) {
         if (s == null) return null;
-        return HEX.parseHex(s);
+        return HEX.parseHex(s.strip());
     }
 
     /**

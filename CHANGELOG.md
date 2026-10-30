@@ -12,6 +12,7 @@ A major release with breaking changes. [Migrating from 1.x](#migrating-from-1x) 
 - Every package is `@NullMarked` (JSpecify): parameters and return values are non-null unless annotated `@Nullable`.
 - `Encoder`: `escapeHtml`, `htmlToText`, `toBase64Basic(byte[])`, sortable Base64 (`toBase64Lex`, `fromBase64Lex`), and decoders that return bytes: `fromBase64Url`, `fromBase64Basic`, `fromBase64Mime`, `fromBase32`, `fromBase32Lex`, `fromBase16`.
 - `Digest`: `hash`, `hashHex`, `hashBase64Url`, `hashBase32`, `hmac`, `hmacHex` and `hmacBase64Url` for any `HashAlgorithm` or `HmacAlgorithm`, and a constant-time `isEqual`.
+- `Digest.verifyHmac`, `verifyHmacHex` and `verifyHmacBase64Url` check a signature, such as a webhook's, in one call. They compare bytes in constant time, and a missing or malformed signature returns false instead of throwing.
 - `RandUtils.passphrase(words)` and `passphrase(words, separator)`, using an 8,192-word list bundled in the jar (13 bits per word), adapted from the EFF Large Wordlist without its hyphenated, profane or sensitive words, alcohol words and company names, plus other common English words. No word is a prefix of another, so an empty separator is safe.
 - `RandUtils.nanoId(size)` and `RandUtils.tuidTimestamp(tuid, base32)`.
 - `Run.all(...)`, which waits for a group of tasks with a real timeout and fails fast, and `Run.submitAll(...)`.
@@ -20,7 +21,6 @@ A major release with breaking changes. [Migrating from 1.x](#migrating-from-1x) 
 - `HttpStatus.equals` and `hashCode`.
 - `CountryCode`: `fromCode`, `hasPostCodes` and `isValidPostCode`.
 - The jar contains `META-INF/LICENSE` and `META-INF/NOTICE`.
-- The build compares the public API with the latest release (japicmp) and fails when a change needs a bigger version bump than the one in `pom.xml`.
 
 ### Changed
 
@@ -34,8 +34,10 @@ A major release with breaking changes. [Migrating from 1.x](#migrating-from-1x) 
 - `RandUtils.time()` returns 10 sortable characters: the 48-bit millisecond timestamp in the base32 alphabet of `toBase32Lex`.
 - `RandUtils.getUrlPath()` returns 44 uniformly chosen letters and digits. `nanoId(char[], int)` and the helpers built on it pick characters uniformly.
 - `QueryParams.get` returns an unmodifiable list, empty when the key is absent (it returned the internal list, or null). A key without a value maps to `""` (it was null), keys keep their order, and the maps are unmodifiable.
-- `GetValid.username` keeps only Unicode letters, digits and `_`, as documented. Emoji and symbols are removed.
+- `GetValid.username` keeps only Unicode letters, digits, combining marks and `_`, as documented, after normalizing to NFC. Emoji and symbols are removed.
 - `GetValid.urlSlug` lowercases with `Locale.ROOT`, so the result no longer depends on the default locale.
+- `GetValid.httpUrlString` accepts internationalized domain names and returns the host in ASCII: `https://例え.jp/path` gives `https://xn--r8jz45g.jp/path` (it gave null). A host that is not a valid domain name, such as one with a label longer than 63 characters, gives null.
+- `GetValid.locale` reads `_` as `-`, so `en_US` gives `en-US` (it gave `en`).
 - `ContextAwareThreadFactory` restores the thread's previous context and MDC after the task.
 - `Please.tryThis` overloads that take a `Callable` restore the thread's interrupt flag when they catch an `InterruptedException`.
 - `ParallelException` requires a non-null context.
@@ -54,6 +56,8 @@ A major release with breaking changes. [Migrating from 1.x](#migrating-from-1x) 
 
 - `GetValid.fileName` returned `"."` and `".."` unchanged, and its 255-character cut could split a `%XX` escape.
 - `GetValid.userNameFromEmail` threw `ArrayIndexOutOfBoundsException` for `""` and `"@"`, and turned `"@x.com"` into `"xcom"`.
+- `GetValid.urlSlug` and `hashtag` dropped the vowel signs and viramas of Devanagari, Tamil and other scripts, and the accents of decomposed text: `urlSlug("नमस्ते दुनिया")` gave `नमस-त-द-न-य`. They now keep combining marks and normalize the input to NFC.
+- `GetValid.tagName` left a double space where it removed a character (`"foo & bar"` gave `"foo  bar"`) and kept tabs and newlines. Each run of whitespace now becomes one space after the removal, and the 100-character cut counts code points, so it never splits a surrogate pair.
 - `Is.email` rejected uppercase domains and 64-character local parts.
 - `QueryParams` cut values at a second `=` (`"a=b=c"` gave `"b"`) and threw on `"="`.
 - `RandUtils.newInt` and `newLong` threw for negative ranges.
@@ -63,11 +67,13 @@ A major release with breaking changes. [Migrating from 1.x](#migrating-from-1x) 
 - `ContextAwareThreadFactory` gave every task on a reused pool thread the context of the task that created the thread. Use `Contexts.wrap` for pooled executors.
 - `Please.tryThis` cleared the interrupt flag of a thread interrupted inside the callable.
 - `CountryCode.CA` never matched a Canadian postal code (its regex ended in a space), and `CountryCode.TD` carried the pattern of TC.
+- The postal code patterns of AD, AI, AX, AZ, BB, CY, FI, FO, HR, HT, KN, MS, SI, TL, VC and VG let the optional country prefix repeat, so `ADAD100` matched. The prefix may now appear once.
 
 ### Security
 
 - `Encoder.htmlSafe` decoded HTML entities, so escaped input such as `&lt;img src=x onerror=alert(1)&gt;` came back as live markup. It is replaced by `escapeHtml`, which is safe for HTML output, and `htmlToText`, which returns plain text that is not safe for HTML.
 - `GetValid.httpUrlString` accepted any scheme it did not block, including `ftp:` and `javascript://`. It now accepts only http and https URLs with a host.
+- `GetValid.httpUrlString` accepted URLs with user info, such as `https://evil.com@good.com/`, which reads as evil.com but opens good.com. It now rejects them.
 
 ### Migrating from 1.x
 

@@ -36,6 +36,9 @@ public final class Is {
             "^(?!.{256})(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+(?:[a-z]{2,63}|xn--[a-z0-9]{2,59})$",
             Pattern.CASE_INSENSITIVE);
 
+    private static final Pattern SUBDOMAIN_PATTERN =
+            Pattern.compile("^[A-Za-z0-9](?:[A-Za-z0-9\\-]{0,61}[A-Za-z0-9])?$");
+
     /**
      * Checks if a JSON string is blank or represents an empty value
      * Empty values include: null, blank string, "null", "[]", "{}"
@@ -113,11 +116,6 @@ public final class Is {
             return false;
         }
 
-        // Validate the hostname against the regex pattern
-        if (!hostname.matches("^[A-Za-z0-9](?:[A-Za-z0-9\\-]{0,61}[A-Za-z0-9])?$")) {
-            return false;
-        }
-
-        return hostname.length() <= 63 && !hostname.isEmpty();
+        return SUBDOMAIN_PATTERN.matcher(hostname).matches();
     }
 }

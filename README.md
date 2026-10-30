@@ -17,7 +17,7 @@ Changes in each release are listed in the [changelog](CHANGELOG.md).
 | Class | What it does |
 |---|---|
 | `Encoder` | URL and HTML escaping; Base64 (URL-safe, standard, MIME, sortable), Base32 (RFC 4648, sortable) and hex, both ways |
-| `Digest` | SHA-2, SHA-3 and HMAC digests as bytes, hex, Base64 or Base32, and constant-time comparison |
+| `Digest` | SHA-2, SHA-3 and HMAC digests as bytes, hex, Base64 or Base32, HMAC signature checks, and constant-time comparison |
 | `RandUtils` | Secure random numbers, tokens, nano IDs, sortable time-based IDs (TUIDs) and passphrases |
 | `BitSetHelpers` | `BitSet` to and from Base64 |
 | `Please` | Runs code that may throw, without a try/catch block |
@@ -40,5 +40,4 @@ Follow the [contributing guide](https://github.com/BonfireTrunk/.github/blob/pri
   ./mvnw verify
   ```
 - **Formatting.** Local builds format Java sources with palantir-java-format, so build once before committing. CI only checks, and fails on unformatted code.
-- **API compatibility.** The build compares the public API with the latest release on Maven Central (japicmp) and fails when a change needs a bigger version bump than the one in `pom.xml`. The report is in `target/japicmp/`.
 - **Version.** Leave the version in `pom.xml` alone, with one exception: if it is a release version (no `-SNAPSHOT` suffix), yours is the first change since that release, so bump it to the next snapshot. For a bug fix, `1.3.0` becomes `1.3.1-SNAPSHOT`; for a new feature, `1.3.0` becomes `1.4.0-SNAPSHOT`.

@@ -7,10 +7,15 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -18,6 +23,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.MDC;
 
 @Timeout(60)
@@ -68,6 +75,60 @@ class RunTest {
         List<Callable<String>> tasks = List.of(() -> "a");
         assertThatThrownBy(() -> Run.all(tasks, Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Run.all(tasks, Duration.ofSeconds(-1))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void testAllAcceptsTimeoutThatOverflowsNanos() throws Exception {
+        List<Callable<String>> tasks = List.of(() -> "a", () -> "b");
+        assertThat(Run.all(tasks, Duration.ofSeconds(Long.MAX_VALUE))).containsExactly("a", "b");
+    }
+
+    @Test
+    void testAllReportsExternalCancellation() {
+        try (var executor = new CapturingExecutor() {
+            @Override
+            public void execute(Runnable command) {
+                firstTask.get().cancel(false);
+                command.run();
+            }
+        }) {
+            List<Callable<String>> tasks = List.of(() -> {
+                throw new AssertionError("Cancelled task must not run");
+            });
+
+            assertThatThrownBy(() -> Run.all(executor, tasks, Duration.ofSeconds(1)))
+                    .isInstanceOfSatisfying(ParallelException.class, e -> {
+                        assertThat(e).hasMessage("Task cancelled").hasCauseInstanceOf(CancellationException.class);
+                    });
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void testRejectedSubmissionCancelsEarlierTask(boolean waitForResults) {
+        CountDownLatch release = new CountDownLatch(1);
+        List<Callable<String>> tasks = List.of(
+                () -> {
+                    release.await();
+                    return "first";
+                },
+                () -> "second");
+
+        try (var executor = new CapturingExecutor()) {
+            try {
+                assertThatThrownBy(() -> {
+                            if (waitForResults) {
+                                Run.all(executor, tasks, Duration.ofSeconds(1));
+                            } else {
+                                Run.submitAll(executor, tasks);
+                            }
+                        })
+                        .isInstanceOf(RejectedExecutionException.class);
+                assertThat(executor.firstTask.get().isCancelled()).isTrue();
+            } finally {
+                release.countDown();
+            }
+        }
     }
 
     @Test
@@ -136,6 +197,23 @@ class RunTest {
             assertThatThrownBy(() -> Run.all(tasks)).isInstanceOfSatisfying(ParallelException.class, e -> {
                 assertThat(e.getContext()).isSameAs(ctx);
                 assertThat(e.getCause()).hasMessage("fail");
+            });
+        }
+    }
+
+    @Test
+    void testErrorKeepsOriginalCauseAndSubmittersContext() {
+        Context<String> ctx = Context.of("submitter");
+        var original = new AssertionError("boom");
+        List<Callable<String>> tasks = List.of(() -> {
+            throw original;
+        });
+
+        try (var scope = Contexts.open(ctx)) {
+            assertThatThrownBy(() -> Run.all(tasks)).isInstanceOfSatisfying(ParallelException.class, e -> {
+                assertThat(e).hasMessage("Task execution failed");
+                assertThat(e.getCause()).isSameAs(original);
+                assertThat(e.getContext()).isSameAs(ctx);
             });
         }
     }
@@ -310,5 +388,20 @@ class RunTest {
         assertThat(waiterDone.await(5, TimeUnit.SECONDS)).isTrue();
         assertThat(thrown.get()).isInstanceOf(InterruptedException.class);
         assertThat(taskInterrupted.await(5, TimeUnit.SECONDS)).isTrue();
+    }
+
+    private static class CapturingExecutor extends ThreadPoolExecutor {
+        final AtomicReference<Future<?>> firstTask = new AtomicReference<>();
+
+        CapturingExecutor() {
+            super(1, 1, 0, TimeUnit.NANOSECONDS, new SynchronousQueue<>());
+        }
+
+        @Override
+        protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+            var task = super.newTaskFor(callable);
+            firstTask.compareAndSet(null, task);
+            return task;
+        }
     }
 }

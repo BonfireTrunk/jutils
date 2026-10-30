@@ -232,6 +232,32 @@ class CountryCodeTest {
         assertThat(country.isValidPostCode(postCode)).isTrue();
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        "AD, AD, 100",
+        "AI, AI-, 1234",
+        "AX, FI, 12345",
+        "AZ, 'AZ ', 1234",
+        "BB, BB, 12345",
+        "CY, CY, 1234",
+        "CY, CY-, 1234",
+        "FI, FI, 12345",
+        "FO, FO, 123",
+        "HR, HR, 12345",
+        "HT, HT, 1234",
+        "KN, KN, 1234",
+        "MS, MSR, 1234",
+        "SI, SI, 1234",
+        "TL, TL, 12345",
+        "VC, VC, 1234",
+        "VG, VG, 1234"
+    })
+    void optionalCountryPrefixAppearsAtMostOnce(CountryCode country, String prefix, String postCode) {
+        assertThat(country.isValidPostCode(prefix + postCode)).isTrue();
+        assertThat(country.isValidPostCode(prefix + prefix + postCode)).isFalse();
+        assertThat(country.isValidPostCode(postCode)).isTrue();
+    }
+
     @Test
     void everyCountryWithARegexHasASampleCode() {
         long withRegex = Arrays.stream(CountryCode.values())

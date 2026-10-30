@@ -12,8 +12,9 @@ import today.bonfire.oss.jutils.constants.HashAlgorithm;
 import today.bonfire.oss.jutils.constants.HmacAlgorithm;
 
 /**
- * Static helpers for message digests and HMACs. All parameters other than those of {@link #isEqual(byte[], byte[])}
- * must not be null (a null argument throws {@link NullPointerException}); strings are converted to bytes as UTF-8.
+ * Static helpers for message digests, HMACs and HMAC verification. Parameters must not be null, except for the
+ * expected signatures in verification methods and both arguments of {@link #isEqual(byte[], byte[])}. Other null
+ * arguments throw {@link NullPointerException}; strings are converted to bytes as UTF-8.
  */
 public final class Digest {
 
@@ -183,6 +184,87 @@ public final class Digest {
      */
     public static String hmacBase64Url(HmacAlgorithm algorithm, String data, String key) {
         return Objects.requireNonNull(Encoder.toBase64Url(hmac(algorithm, data, key)));
+    }
+
+    /**
+     * Computes an HMAC and compares its bytes with the expected signature using {@link #isEqual(byte[], byte[])}.
+     * The comparison is constant time for equal lengths. A null, empty or wrong-length signature returns false.
+     *
+     * <p>For signatures supplied as text, the caller removes any scheme prefix such as {@code sha256=} first.
+     * For standard Base64, decode with {@link Encoder#fromBase64Basic(String)} and use this byte array overload.
+     *
+     * @param algorithm the HMAC algorithm
+     * @param data      the bytes to authenticate, may be empty
+     * @param key       the secret key; must not be empty
+     * @param expected  the expected raw signature, may be null or empty
+     *
+     * @return true if the expected signature matches the computed HMAC; false otherwise
+     *
+     * @throws NullPointerException     if algorithm, data or key is null
+     * @throws IllegalArgumentException if the key is empty or rejected by the algorithm
+     * @throws IllegalStateException    if the JVM does not provide the algorithm
+     */
+    public static boolean verifyHmac(HmacAlgorithm algorithm, byte[] data, byte[] key, byte @Nullable [] expected) {
+        return isEqual(hmac(algorithm, data, key), expected);
+    }
+
+    /**
+     * Computes an HMAC over the UTF-8 bytes of data and key and compares bytes using {@link #isEqual(byte[], byte[])}.
+     * The expected signature is hexadecimal in either case; surrounding whitespace is ignored. A null, blank,
+     * wrong-length or invalid hexadecimal signature returns false. The comparison is constant time for equal lengths.
+     *
+     * <p>The caller removes any scheme prefix such as {@code sha256=} first. For standard Base64, decode with
+     * {@link Encoder#fromBase64Basic(String)} and use {@link #verifyHmac(HmacAlgorithm, byte[], byte[], byte[])}.
+     *
+     * @param algorithm   the HMAC algorithm
+     * @param data        the string to authenticate, may be empty
+     * @param key         the secret key; must not be empty
+     * @param expectedHex the expected hexadecimal signature, may be null, empty or blank
+     *
+     * @return true if the decoded signature matches the computed HMAC; false otherwise
+     *
+     * @throws NullPointerException     if algorithm, data or key is null
+     * @throws IllegalArgumentException if the key is empty or rejected by the algorithm
+     * @throws IllegalStateException    if the JVM does not provide the algorithm
+     */
+    public static boolean verifyHmacHex(
+            HmacAlgorithm algorithm, String data, String key, @Nullable String expectedHex) {
+        var actual = hmac(algorithm, data, key);
+        try {
+            return isEqual(actual, Encoder.fromBase16(expectedHex));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Computes an HMAC over the UTF-8 bytes of data and key and compares bytes using {@link #isEqual(byte[], byte[])}.
+     * The expected signature is URL-safe Base64 with optional padding; surrounding whitespace is ignored. A null,
+     * blank, wrong-length or invalid URL-safe Base64 signature returns false. The comparison is constant time for
+     * equal lengths.
+     *
+     * <p>The caller removes any scheme prefix such as {@code sha256=} first. For standard Base64, decode with
+     * {@link Encoder#fromBase64Basic(String)} and use {@link #verifyHmac(HmacAlgorithm, byte[], byte[], byte[])}.
+     *
+     * @param algorithm         the HMAC algorithm
+     * @param data              the string to authenticate, may be empty
+     * @param key               the secret key; must not be empty
+     * @param expectedBase64Url the expected URL-safe Base64 signature, may be null, empty or blank
+     *
+     * @return true if the decoded signature matches the computed HMAC; false otherwise
+     *
+     * @throws NullPointerException     if algorithm, data or key is null
+     * @throws IllegalArgumentException if the key is empty or rejected by the algorithm
+     * @throws IllegalStateException    if the JVM does not provide the algorithm
+     */
+    public static boolean verifyHmacBase64Url(
+            HmacAlgorithm algorithm, String data, String key, @Nullable String expectedBase64Url) {
+        var actual = hmac(algorithm, data, key);
+        try {
+            return isEqual(actual, Encoder.fromBase64Url(expectedBase64Url));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     /**
