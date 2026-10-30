@@ -1,22 +1,26 @@
 package today.bonfire.oss.jutils.helpers;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.util.Locale;
-import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.LocaleUtils;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
-import today.bonfire.oss.jutils.Encoder;
 import today.bonfire.oss.jutils.RandUtils;
-import today.bonfire.oss.jutils.constants.ArrayItem;
 import today.bonfire.oss.jutils.constants.CC;
 
+/**
+ * Sanitizing and validating helpers for user supplied strings such as file names, slugs, usernames and URLs.
+ */
 @Slf4j
-public class GetValid {
+public final class GetValid {
+
+    private GetValid() {}
 
     private static final String SPECIAL_CHARS = "[`~!@#$%^&*()_|+=?;:'\",.<>\\{\\}\\[\\]\\\\\\/]";
     private static final String NON_WORD_CHARS = "\\W";
@@ -31,17 +35,23 @@ public class GetValid {
     private static final String DEFAULT_LOCALE = "en";
     private static final String DEFAULT_TIMEZONE = "UTC";
 
-    private static final Set<String> BLOCKED_SCHEMES = Set.of("java", "data", "file", "jar");
     private static final String DEFAULT_SCHEME = "https";
 
+    // "scheme:" not followed by a port number. Separates "javascript:alert(1)" or "mailto:a@b.com" (rejected)
+    // from "example.com:8080/x" (a host with a port, accepted).
+    private static final Pattern SCHEME_WITHOUT_AUTHORITY =
+            Pattern.compile("^[A-Za-z][A-Za-z0-9+.\\-]*:(?!\\d+(?:[/?#]|$))");
+
     /**
-     * Returns an alphanumeric string by removing all non-word characters.
-     * If input is empty or results in empty string after processing, returns a random ID.
+     * Returns the ASCII letters and digits of the input, in order, truncated to 255 characters.
+     * Everything else is removed: whitespace, punctuation, underscores and all non-ASCII characters
+     * (including accented letters).
+     * Returns an empty string (never a random ID) when the input is null or empty or nothing remains.
      *
-     * @param text input string to process
-     * @return alphanumeric string or random ID if empty
+     * @param text input string to process, may be null
+     * @return the ASCII alphanumeric characters of the input, or "" if there are none
      */
-    public static String alphaNumeric(String text) {
+    public static String alphaNumeric(@Nullable String text) {
         if (text == null || text.isEmpty()) {
             return "";
         }
@@ -49,14 +59,17 @@ public class GetValid {
     }
 
     /**
-     * Returns an alphanumeric string by removing all non-word characters.
-     * If input is empty or results in empty string after processing, returns a random ID.
+     * Returns the ASCII letters and digits of the input, in order, truncated to {@code maxLength} characters.
+     * Everything else is removed: whitespace, punctuation, underscores and all non-ASCII characters
+     * (including accented letters).
+     * Returns an empty string (never a random ID) when the input is null or empty or nothing remains.
      *
-     * @param text      input string to process
+     * @param text      input string to process, may be null
      * @param maxLength maximum length of the result
-     * @return alphanumeric string or random ID if empty
+     * @return the ASCII alphanumeric characters of the input, or "" if there are none
+     * @throws StringIndexOutOfBoundsException if {@code maxLength} is negative and the result is longer than it
      */
-    public static String alphaNumeric(String text, int maxLength) {
+    public static String alphaNumeric(@Nullable String text, int maxLength) {
         if (StringUtils.isEmpty(text)) {
             return "";
         }
@@ -72,34 +85,49 @@ public class GetValid {
 
     /**
      * Sanitizes a filename by removing invalid characters and ensuring it's URL safe.
+     * Whitespace and the characters {@code ` ~ ! # $ % ^ & * ( ) | + = ? ; : ' " , < > { } [ ] \ /} are removed,
+     * then the rest is URL-encoded (UTF-8). The result is at most 255 characters and is cut only between
+     * encoded characters, never inside a {@code %XX} escape.
+     * The result is one file-name component, not a path, and it does not make names unique.
+     * A random 8-character ID is returned when the input is null or blank, when nothing remains after cleaning,
+     * or when only dots remain (".", "..", ...), so the result is never a directory reference.
      *
-     * @param name the filename to sanitize
-     * @return sanitized filename or random ID if empty
+     * @param name the filename to sanitize, may be null
+     * @return sanitized filename, or a random ID as described above
      */
-    public static String fileName(String name) {
+    public static String fileName(@Nullable String name) {
         if (StringUtils.isBlank(name)) {
             return RandUtils.nanoIdWordSafe(8);
         }
 
-        String result = RegExUtils.removeAll(name, "\\s");
-        result = RegExUtils.removeAll(result, "[`~!#$%^&*()&%|+=?;:'\",<>\\{\\}\\[\\]\\\\\\/]");
-        result = Encoder.urlEncode(result);
+        String cleaned = RegExUtils.removeAll(name, "\\s");
+        cleaned = RegExUtils.removeAll(cleaned, "[`~!#$%^&*()&%|+=?;:'\",<>\\{\\}\\[\\]\\\\\\/]");
 
-        if (StringUtils.isBlank(result)) {
+        if (cleaned.isEmpty() || cleaned.chars().allMatch(c -> c == '.')) {
             return RandUtils.nanoIdWordSafe(8);
         }
 
-        return result.length() > DEFAULT_MAX_LENGTH ? result.substring(0, DEFAULT_MAX_LENGTH) : result;
+        var result = new StringBuilder();
+        for (int i = 0; i < cleaned.length(); ) {
+            int cp = cleaned.codePointAt(i);
+            i += Character.charCount(cp);
+            String encoded = URLEncoder.encode(new String(Character.toChars(cp)), StandardCharsets.UTF_8);
+            if (result.length() + encoded.length() > DEFAULT_MAX_LENGTH) {
+                break;
+            }
+            result.append(encoded);
+        }
+        return result.toString();
     }
 
     /**
      * Sanitizes a tag name by removing special characters and normalizing spaces.
      * Returns empty string for invalid input.
      *
-     * @param name the tag name to sanitize
+     * @param name the tag name to sanitize, may be null
      * @return sanitized tag name or empty string
      */
-    public static String tagName(String name) {
+    public static String tagName(@Nullable String name) {
         if (StringUtils.isBlank(name)) {
             return CC.EMPTY_STRING;
         }
@@ -117,29 +145,33 @@ public class GetValid {
 
     /**
      * Creates a URL-friendly slug from the given string.
-     * Converts spaces to hyphens, removes special characters, and ensures proper length.
+     * Equivalent to {@code urlSlug(name, true)}.
      *
-     * @param name the string to convert to a slug
-     * @return the URL-friendly slug or random ID if empty
+     * @param name the string to convert to a slug, may be null
+     * @return the slug, or a random 6-character ID if the input is null, blank or yields an empty slug
+     * @see #urlSlug(String, boolean)
      */
-    public static String urlSlug(String name) {
+    public static String urlSlug(@Nullable String name) {
         return urlSlug(name, true);
     }
 
     /**
      * Creates a URL-friendly slug from the given string.
-     * Handles UTF-8 characters by using codepoints.
+     * The input is lowercased with {@link Locale#ROOT} (independent of the default locale), cut to its first
+     * 100 code points, and every code point that is not a letter or digit (including whitespace) becomes a hyphen.
+     * Runs of hyphens collapse to one and leading and trailing hyphens are removed. Unicode letters are kept.
      *
-     * @param name             the string to convert to a slug
-     * @param setRandomIfEmpty if true, returns a random ID when input is empty
-     * @return the URL-friendly slug, random ID if empty and setRandomIfEmpty is true, or empty string
+     * @param name             the string to convert to a slug, may be null
+     * @param setRandomIfEmpty if true, a random 6-character ID is returned when the input is null, blank or
+     *                         yields an empty slug
+     * @return the slug, the random ID, or "" if empty and {@code setRandomIfEmpty} is false
      */
-    public static String urlSlug(String name, boolean setRandomIfEmpty) {
+    public static String urlSlug(@Nullable String name, boolean setRandomIfEmpty) {
         if (StringUtils.isBlank(name)) {
             return setRandomIfEmpty ? RandUtils.nanoIdWordSafe(6) : CC.EMPTY_STRING;
         }
 
-        String slug = name.toLowerCase()
+        String slug = name.toLowerCase(Locale.ROOT)
                 .trim()
                 .codePoints()
                 .limit(MAX_SLUG_LENGTH)
@@ -152,9 +184,6 @@ public class GetValid {
                 })
                 .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
                 .toString();
-
-        // Replace spaces with hyphens
-        slug = RegExUtils.replaceAll(slug, "\\s+", SLUG_SEPARATOR);
 
         // Clean up separators
         slug = MULTIPLE_SEPARATORS.matcher(slug).replaceAll(SLUG_SEPARATOR);
@@ -169,14 +198,14 @@ public class GetValid {
 
     /**
      * Sanitizes a hashtag by removing special characters and spaces.
-     * Handles UTF-8 characters properly by converting them to their closest ASCII representation.
-     * Returns null for invalid input.
+     * Removes one leading '#', then keeps only Unicode letters, digits and '_' (at most 140 code points).
+     * It does not transliterate to ASCII and does not change case.
      *
-     * @param s the hashtag to sanitize (with or without leading #)
-     * @return sanitized hashtag without # prefix, or null if invalid
+     * @param s the hashtag to sanitize (with or without leading #), may be null
+     * @return sanitized hashtag without # prefix, or null if the input is null or blank or nothing remains
      */
     @Nullable
-    public static String hashtag(String s) {
+    public static String hashtag(@Nullable String s) {
         if (StringUtils.isBlank(s)) {
             return null;
         }
@@ -184,7 +213,6 @@ public class GetValid {
         // Remove leading # if present
         String tag = s.startsWith("#") ? s.substring(1) : s;
 
-        // Convert to lowercase and normalize
         tag = tag.trim()
                 .codePoints()
                 .filter(cp -> Character.isLetterOrDigit(cp) || cp == '_')
@@ -199,10 +227,10 @@ public class GetValid {
      * Validates and returns a proper locale tag.
      * Falls back to "en" if the input is invalid.
      *
-     * @param s the locale string to validate
+     * @param s the locale string to validate, may be null
      * @return valid locale tag
      */
-    public static String locale(String s) {
+    public static String locale(@Nullable String s) {
         try {
             var localeTag = StringUtils.defaultIfBlank(s, DEFAULT_LOCALE);
             var locale = Locale.forLanguageTag(localeTag);
@@ -220,10 +248,10 @@ public class GetValid {
      * Validates and returns a proper timezone ID.
      * Falls back to "UTC" if the input is invalid.
      *
-     * @param s the timezone string to validate
+     * @param s the timezone string to validate, may be null
      * @return valid timezone ID
      */
-    public static String timeZone(String s) {
+    public static String timeZone(@Nullable String s) {
         try {
             return ZoneId.of(StringUtils.defaultIfBlank(s, DEFAULT_TIMEZONE)).getId();
         } catch (Exception e) {
@@ -233,40 +261,40 @@ public class GetValid {
     }
 
     /**
-     * Validates and normalizes an HTTP URL string.
-     * Ensures the URL is absolute and uses a safe scheme.
-     * Defaults to HTTPS for protocol-relative URLs.
+     * Validates and normalizes an HTTP(S) URL string.
+     * The input is trimmed. A protocol-relative URL ("//host/x") gets an "https:" prefix and a value without
+     * "://" gets an "https://" prefix. The result is accepted only if it parses as a URI with scheme http or https
+     * (case-insensitive) and a non-null host. A value that starts with another scheme but has no "//"
+     * (for example "javascript:alert(1)" or "mailto:a@b.com") is rejected instead of being read as user info.
+     * Never throws; a parse failure is logged at debug level and gives null.
      *
-     * @param url the URL string to validate
-     * @return normalized URL string or null if invalid
+     * @param url the URL string to validate, may be null
+     * @return the normalized URL ({@code URI.toString()}), or null if the input is null, blank or not a valid
+     *         http(s) URL
      */
     @Nullable
-    public static String httpUrlString(String url) {
+    public static String httpUrlString(@Nullable String url) {
         if (StringUtils.isBlank(url)) {
             return null;
         }
 
+        String trimmed = url.trim();
         try {
-            // First try parsing as is to check if it's already absolute
-            if (url.contains("://")) {
-                URI uri = URI.create(url);
-                String scheme = uri.getScheme();
-                if (scheme != null && BLOCKED_SCHEMES.contains(scheme.toLowerCase())) {
+            String normalizedUrl = trimmed;
+            if (trimmed.startsWith("//")) {
+                normalizedUrl = DEFAULT_SCHEME + ":" + trimmed;
+            } else if (!trimmed.contains("://")) {
+                if (SCHEME_WITHOUT_AUTHORITY.matcher(trimmed).find()) {
                     return null;
                 }
-            }
-
-            // Now handle normalization
-            String normalizedUrl = url;
-            if (url.startsWith("//")) {
-                normalizedUrl = DEFAULT_SCHEME + ":" + url;
-            } else if (!url.contains("://")) {
-                normalizedUrl = DEFAULT_SCHEME + "://" + url;
+                normalizedUrl = DEFAULT_SCHEME + "://" + trimmed;
             }
 
             URI uri = URI.create(normalizedUrl);
-
-            // Ensure host is present
+            String scheme = uri.getScheme();
+            if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+                return null;
+            }
             if (uri.getHost() == null) {
                 return null;
             }
@@ -278,21 +306,43 @@ public class GetValid {
         }
     }
 
-    public static String userNameFromEmail(String email, boolean needRandomSuffix) {
-        String[] split = StringUtils.split(email, "@", 2);
-        if (split == null) return username(null, needRandomSuffix);
-        return username(split[ArrayItem.FIRST], needRandomSuffix);
+    /**
+     * Derives a username from an email address.
+     * The local part is the text before the first '@' (the whole input if there is no '@'), and it is passed to
+     * {@link #username(String, boolean)}. So "", "@", "@x.com" and null all give the "buddy" fallback.
+     *
+     * @param email            the email address, may be null
+     * @param needRandomSuffix if true, "_" plus a random 5-character ID is appended
+     * @return a username as described in {@link #username(String, boolean)}
+     */
+    public static String userNameFromEmail(@Nullable String email, boolean needRandomSuffix) {
+        if (email == null) {
+            return username(null, needRandomSuffix);
+        }
+        int at = email.indexOf('@');
+        return username(at < 0 ? email : email.substring(0, at), needRandomSuffix);
     }
 
     /**
-     * only allow alphanumeric and underscore
+     * Builds a username containing only Unicode letters, digits and underscore.
+     * The input is trimmed, whitespace and '-' become '_', and every other character that is not a letter,
+     * digit or '_' is removed ("José" stays "José", emoji and symbols are dropped). If nothing remains, a random
+     * 8-character ID is used. If the input is null or blank, "buddy" plus a random 8-character ID is returned
+     * instead.
+     *
+     * @param username         the desired username, may be null
+     * @param needRandomSuffix if true, "_" plus a random 5-character ID is appended to the name (not to the
+     *                         blank-input fallback)
+     * @return the sanitized username, never empty
      */
-    public static String username(String username, boolean needRandomSuffix) {
+    public static String username(@Nullable String username, boolean needRandomSuffix) {
         if (StringUtils.isNotBlank(username)) {
-            var name = StringUtils.trimToEmpty(username);
-            name = RegExUtils.replaceAll(name, "\\s", CC.Separator.US);
-            name = RegExUtils.replaceAll(name, "\\-", CC.Separator.US);
-            name = RegExUtils.removeAll(name, "[`~!#$%@^*()|+\\-\\&=?;:'\",.<>\\{\\}\\[\\]\\\\\\/]");
+            String name = username.strip()
+                    .codePoints()
+                    .map(cp -> Character.isWhitespace(cp) || cp == '-' ? '_' : cp)
+                    .filter(cp -> Character.isLetterOrDigit(cp) || cp == '_')
+                    .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                    .toString();
             if (name.isEmpty()) name = RandUtils.nanoIdWordSafe(8);
             return name + (needRandomSuffix ? (CC.Separator.US + RandUtils.nanoIdWordSafe(5)) : "");
         } else {
@@ -300,7 +350,14 @@ public class GetValid {
         }
     }
 
-    public static String username(String username) {
+    /**
+     * Equivalent to {@code username(username, false)}.
+     *
+     * @param username the desired username, may be null
+     * @return the sanitized username, never empty
+     * @see #username(String, boolean)
+     */
+    public static String username(@Nullable String username) {
         return username(username, false);
     }
 }

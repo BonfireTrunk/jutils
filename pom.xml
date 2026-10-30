@@ -7,12 +7,12 @@
   <parent>
     <groupId>today.bonfire.oss</groupId>
     <artifactId>bonfire-oss-parent</artifactId>
-    <version>2.1.0</version>
+    <version>2.1.1</version>
   </parent>
 
   <groupId>today.bonfire.oss</groupId>
   <artifactId>jutils</artifactId>
-  <version>1.3.1-SNAPSHOT</version>
+  <version>2.0.0-SNAPSHOT</version>
 
 
   <name>${project.groupId}:${project.artifactId}</name>
@@ -25,7 +25,7 @@
   <licenses>
     <license>
       <name>The Apache License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
@@ -49,6 +49,7 @@
   <properties>
     <module.name>bonfire.oss.jutils</module.name>
     <jspecify.version>1.0.1</jspecify.version>
+    <japicmp-maven-plugin.version>0.26.5</japicmp-maven-plugin.version>
   </properties>
 
   <dependencies>
@@ -65,21 +66,27 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>${commons-lang3.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>${guava.version}</version>
     </dependency>
     <dependency>
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
-      <version>${jsoup.version}</version>
     </dependency>
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <targetPath>META-INF</targetPath>
+        <includes>
+          <include>LICENSE</include>
+          <include>NOTICE</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -113,6 +120,29 @@
             <phase>process-classes</phase>
             <goals>
               <goal>manifest</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Compares the public API with the latest release on Maven Central and fails the build when a change
+           breaks compatibility beyond what the version bump allows (semantic versioning). -->
+      <plugin>
+        <groupId>com.github.siom79.japicmp</groupId>
+        <artifactId>japicmp-maven-plugin</artifactId>
+        <version>${japicmp-maven-plugin.version}</version>
+        <configuration>
+          <parameter>
+            <oldVersionPattern>\d+\.\d+\.\d+</oldVersionPattern>
+            <onlyModified>true</onlyModified>
+            <breakBuildBasedOnSemanticVersioning>true</breakBuildBasedOnSemanticVersioning>
+          </parameter>
+        </configuration>
+        <executions>
+          <execution>
+            <id>api-compatibility</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>cmp</goal>
             </goals>
           </execution>
         </executions>

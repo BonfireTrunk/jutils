@@ -3,6 +3,7 @@ package today.bonfire.oss.jutils.web;
 import java.net.http.HttpResponse;
 import lombok.Getter;
 import lombok.experimental.Accessors;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Represents an HTTP status code.
@@ -13,7 +14,7 @@ import lombok.experimental.Accessors;
  * @since 1.0
  */
 @Accessors(fluent = true, chain = true)
-public class HttpStatus {
+public final class HttpStatus {
 
     /**
      * The HTTP status code.
@@ -113,6 +114,32 @@ public class HttpStatus {
         return statusCode >= 600;
     }
 
+    /**
+     * Compares by status code only.
+     *
+     * @param o the object to compare with, may be null
+     * @return true if {@code o} is an HttpStatus with the same status code, false otherwise (including for null)
+     */
+    @Override
+    public boolean equals(@Nullable Object o) {
+        return this == o || (o instanceof HttpStatus other && other.statusCode == statusCode);
+    }
+
+    /**
+     * Returns a hash code derived from the status code only, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code
+     */
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(statusCode);
+    }
+
+    /**
+     * Returns the bare status code.
+     *
+     * @return the status code as a decimal string, for example {@code "404"}
+     */
     @Override
     public String toString() {
         return String.valueOf(statusCode);

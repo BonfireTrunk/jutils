@@ -1,162 +1,200 @@
 package today.bonfire.oss.jutils;
 
-import com.google.common.io.BaseEncoding;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Objects;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import lombok.extern.slf4j.Slf4j;
-import today.bonfire.oss.jutils.constants.DigestHash;
+import org.jspecify.annotations.Nullable;
+import today.bonfire.oss.jutils.constants.HashAlgorithm;
+import today.bonfire.oss.jutils.constants.HmacAlgorithm;
 
-@Slf4j
-public class Digest {
+/**
+ * Static helpers for message digests and HMACs. All parameters other than those of {@link #isEqual(byte[], byte[])}
+ * must not be null (a null argument throws {@link NullPointerException}); strings are converted to bytes as UTF-8.
+ */
+public final class Digest {
 
-    /**
-     * return a base64 url encoded sha 3 string from the input. StandardCharsets.UTF_8 is used
-     *
-     * @param value the input string
-     * @return sha 3 digest value, null if input is null
-     */
-    public static String base64Sha3_256(String value) {
-        return digestToBase64(value, DigestHash.SHA_3_256);
-    }
-
-    public static byte[] base64Sha3_256AsBytes(String value) {
-        return digestToBytes(value, DigestHash.SHA_3_256);
-    }
-
-    public static String base32Sha3_256(String value) {
-        if (value == null) return null;
-        return Encoder.toBase32(digestToBytes(value, DigestHash.SHA_3_256));
-    }
+    private Digest() {}
 
     /**
-     * return a base64 url encoded sha 3 string from the input. StandardCharsets.UTF_8 is used
+     * Computes a message digest.
      *
-     * @param value the input string
-     * @return sha 3 digest value, null if input is null
-     */
-    public static String base64Sha3_384(String value) {
-        return digestToBase64(value, DigestHash.SHA_3_384);
-    }
-
-    /**
-     * return a base64 url encoded sha 3 string from the input. StandardCharsets.UTF_8 is used
+     * @param algorithm the hash algorithm
+     * @param data      the bytes to hash
      *
-     * @param value the input string
-     * @return sha 3 digest value, null if input is null
+     * @return the raw digest; its length is fixed by the algorithm
+     *
+     * @throws NullPointerException  if an argument is null
+     * @throws IllegalStateException if the JVM does not provide the algorithm
      */
-    public static String base64Sha3_512(String value) {
-        return digestToBase64(value, DigestHash.SHA_3_512);
-    }
-
-    public static String base64Sha256(String value) {
-        return digestToBase64(value, DigestHash.SHA_256);
-    }
-
-    public static String base64Sha384(String value) {
-        return digestToBase64(value, DigestHash.SHA_384);
-    }
-
-    public static String base64Sha512(String value) {
-        return digestToBase64(value, DigestHash.SHA_512);
-    }
-
-    public static String sha256(String value) {
-        if (value == null) return null;
-        return Encoder.toBase16(digestToBytes(value, DigestHash.SHA_256));
-    }
-
-    private static String digestToBase64(String value, DigestHash algorithm) {
-        if (value == null) return null;
-        return Encoder.toBase64(digestToBytes(value, algorithm));
-    }
-
-    private static byte[] digestToBytes(String value, DigestHash algorithm) {
-        if (value == null) return null;
-        return getDigest(algorithm).digest(value.getBytes(StandardCharsets.UTF_8));
-    }
-
-    static MessageDigest getDigest(DigestHash hashAlgo) {
+    public static byte[] hash(HashAlgorithm algorithm, byte[] data) {
+        Objects.requireNonNull(algorithm, "algorithm");
+        Objects.requireNonNull(data, "data");
         try {
-            return MessageDigest.getInstance(hashAlgo.toString());
+            return MessageDigest.getInstance(algorithm.jcaName()).digest(data);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException("Hash algorithm not available: " + algorithm.jcaName(), e);
         }
     }
 
-    private static byte[] hmacSHA(String data, String key, DigestHash algorithm) {
-        if (data == null || key == null) return null;
-        return hmacSHA(data.getBytes(StandardCharsets.UTF_8), key.getBytes(StandardCharsets.UTF_8), algorithm);
+    /**
+     * Computes a message digest of the UTF-8 bytes of a string.
+     *
+     * @param algorithm the hash algorithm
+     * @param data      the string to hash
+     *
+     * @return the raw digest; its length is fixed by the algorithm
+     *
+     * @throws NullPointerException  if an argument is null
+     * @throws IllegalStateException if the JVM does not provide the algorithm
+     */
+    public static byte[] hash(HashAlgorithm algorithm, String data) {
+        Objects.requireNonNull(data, "data");
+        return hash(algorithm, data.getBytes(StandardCharsets.UTF_8));
     }
 
-    private static byte[] hmacSHA(byte[] data, byte[] key, DigestHash algorithm) {
-        if (data == null || key == null) return null;
+    /**
+     * Computes a message digest of the UTF-8 bytes of a string and returns it as lowercase hexadecimal.
+     *
+     * @param algorithm the hash algorithm
+     * @param data      the string to hash
+     *
+     * @return the digest in lowercase hex, two characters per byte
+     *
+     * @throws NullPointerException  if an argument is null
+     * @throws IllegalStateException if the JVM does not provide the algorithm
+     */
+    public static String hashHex(HashAlgorithm algorithm, String data) {
+        return Objects.requireNonNull(Encoder.toBase16(hash(algorithm, data)));
+    }
+
+    /**
+     * Computes a message digest of the UTF-8 bytes of a string and returns it as URL-safe Base64 without padding.
+     *
+     * @param algorithm the hash algorithm
+     * @param data      the string to hash
+     *
+     * @return the digest in URL-safe Base64 (alphabet {@code A-Z a-z 0-9 - _}), no padding
+     *
+     * @throws NullPointerException  if an argument is null
+     * @throws IllegalStateException if the JVM does not provide the algorithm
+     */
+    public static String hashBase64Url(HashAlgorithm algorithm, String data) {
+        return Objects.requireNonNull(Encoder.toBase64Url(hash(algorithm, data)));
+    }
+
+    /**
+     * Computes a message digest of the UTF-8 bytes of a string and returns it as RFC 4648 Base32.
+     *
+     * @param algorithm the hash algorithm
+     * @param data      the string to hash
+     *
+     * @return the digest in lowercase Base32 (alphabet {@code a-z 2-7}), no padding
+     *
+     * @throws NullPointerException  if an argument is null
+     * @throws IllegalStateException if the JVM does not provide the algorithm
+     */
+    public static String hashBase32(HashAlgorithm algorithm, String data) {
+        return Objects.requireNonNull(Encoder.toBase32(hash(algorithm, data)));
+    }
+
+    /**
+     * Computes an HMAC.
+     *
+     * @param algorithm the HMAC algorithm
+     * @param data      the bytes to authenticate
+     * @param key       the secret key; must not be empty
+     *
+     * @return the raw HMAC; its length is fixed by the algorithm
+     *
+     * @throws NullPointerException     if an argument is null
+     * @throws IllegalArgumentException if the key is empty or rejected by the algorithm
+     * @throws IllegalStateException    if the JVM does not provide the algorithm
+     */
+    public static byte[] hmac(HmacAlgorithm algorithm, byte[] data, byte[] key) {
+        Objects.requireNonNull(algorithm, "algorithm");
+        Objects.requireNonNull(data, "data");
+        Objects.requireNonNull(key, "key");
+        if (key.length == 0) {
+            throw new IllegalArgumentException("key must not be empty");
+        }
         try {
-            Mac mac = Mac.getInstance(algorithm.toString());
-            SecretKeySpec secretKeySpec = new SecretKeySpec(key, algorithm.toString());
-            mac.init(secretKeySpec);
+            Mac mac = Mac.getInstance(algorithm.jcaName());
+            mac.init(new SecretKeySpec(key, algorithm.jcaName()));
             return mac.doFinal(data);
-        } catch (NoSuchAlgorithmException | java.security.InvalidKeyException e) {
-            log.error("HMAC computation failed", e);
-            throw new RuntimeException("HMAC computation failed", e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("HMAC algorithm not available: " + algorithm.jcaName(), e);
+        } catch (InvalidKeyException e) {
+            throw new IllegalArgumentException("Invalid HMAC key", e);
         }
     }
 
     /**
-     * Compute HMAC-SHA-256 and return the result as a hexadecimal string
+     * Computes an HMAC over the UTF-8 bytes of a string, keyed with the UTF-8 bytes of a string.
      *
-     * @param data the input data
-     * @param key  the key for HMAC
-     * @return hexadecimal encoded HMAC value, null if either input is null
+     * @param algorithm the HMAC algorithm
+     * @param data      the string to authenticate
+     * @param key       the secret key; must not be empty
+     *
+     * @return the raw HMAC; its length is fixed by the algorithm
+     *
+     * @throws NullPointerException     if an argument is null
+     * @throws IllegalArgumentException if the key is empty or rejected by the algorithm
+     * @throws IllegalStateException    if the JVM does not provide the algorithm
      */
-    public static String hmacSha256Hex(String data, String key) {
-        byte[] hmac = hmacSHA(data, key, DigestHash.HMAC_SHA_256);
-        return hmac != null ? BaseEncoding.base16().encode(hmac) : null;
+    public static byte[] hmac(HmacAlgorithm algorithm, String data, String key) {
+        Objects.requireNonNull(data, "data");
+        Objects.requireNonNull(key, "key");
+        return hmac(algorithm, data.getBytes(StandardCharsets.UTF_8), key.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
-     * Compute HMAC-SHA-256 and return the result as a hexadecimal string
+     * Computes an HMAC over the UTF-8 bytes of a string and returns it as lowercase hexadecimal.
      *
-     * @param data the input data as bytes
-     * @param key  the key for HMAC as bytes
-     * @return hexadecimal encoded HMAC value, null if either input is null
+     * @param algorithm the HMAC algorithm
+     * @param data      the string to authenticate
+     * @param key       the secret key; must not be empty
+     *
+     * @return the HMAC in lowercase hex, two characters per byte
+     *
+     * @throws NullPointerException     if an argument is null
+     * @throws IllegalArgumentException if the key is empty or rejected by the algorithm
+     * @throws IllegalStateException    if the JVM does not provide the algorithm
      */
-    public static String hmacSha256Hex(byte[] data, byte[] key) {
-        byte[] hmac = hmacSHA(data, key, DigestHash.HMAC_SHA_256);
-        return hmac != null ? BaseEncoding.base16().encode(hmac) : null;
+    public static String hmacHex(HmacAlgorithm algorithm, String data, String key) {
+        return Objects.requireNonNull(Encoder.toBase16(hmac(algorithm, data, key)));
     }
 
     /**
-     * Compute HMAC-SHA-256 and return the raw bytes
+     * Computes an HMAC over the UTF-8 bytes of a string and returns it as URL-safe Base64 without padding.
      *
-     * @param data the input data
-     * @param key  the key for HMAC
-     * @return raw HMAC value as bytes, null if either input is null
+     * @param algorithm the HMAC algorithm
+     * @param data      the string to authenticate
+     * @param key       the secret key; must not be empty
+     *
+     * @return the HMAC in URL-safe Base64 (alphabet {@code A-Z a-z 0-9 - _}), no padding
+     *
+     * @throws NullPointerException     if an argument is null
+     * @throws IllegalArgumentException if the key is empty or rejected by the algorithm
+     * @throws IllegalStateException    if the JVM does not provide the algorithm
      */
-    public static byte[] hmacSha256(String data, String key) {
-        return hmacSHA(data, key, DigestHash.HMAC_SHA_256);
+    public static String hmacBase64Url(HmacAlgorithm algorithm, String data, String key) {
+        return Objects.requireNonNull(Encoder.toBase64Url(hmac(algorithm, data, key)));
     }
 
     /**
-     * Compute HMAC-SHA-256 and return the raw bytes
+     * Compares two byte arrays in constant time for equal lengths, using {@link MessageDigest#isEqual(byte[], byte[])}.
+     * Use it to compare MACs, hashes and tokens instead of {@code Arrays.equals}.
      *
-     * @param data the input data as bytes
-     * @param key  the key for HMAC as bytes
-     * @return raw HMAC value as bytes, null if either input is null
+     * @param a the first array, may be null
+     * @param b the second array, may be null
+     *
+     * @return true if both are null or both have the same content; false if only one is null or the content differs
      */
-    public static byte[] hmacSha256(byte[] data, byte[] key) {
-        return hmacSHA(data, key, DigestHash.HMAC_SHA_256);
-    }
-
-    public static String hmacSha384(String data, String key) {
-        byte[] hmac = hmacSHA(data, key, DigestHash.HMAC_SHA_384);
-        return hmac != null ? Encoder.toBase64(hmac) : null;
-    }
-
-    public static String hmacSha512(String data, String key) {
-        byte[] hmac = hmacSHA(data, key, DigestHash.HMAC_SHA_512);
-        return hmac != null ? Encoder.toBase64(hmac) : null;
+    public static boolean isEqual(byte @Nullable [] a, byte @Nullable [] b) {
+        return MessageDigest.isEqual(a, b);
     }
 }

@@ -2,11 +2,14 @@ package today.bonfire.oss.jutils.helpers;
 
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A utility class providing various checks and validations for different data types.
  */
-public class Is {
+public final class Is {
+
+    private Is() {}
 
     /**
      * A pattern to validate hexadecimal color codes in various formats:
@@ -20,57 +23,28 @@ public class Is {
     /**
      * Pattern for validating email addresses using a simplified regex based on OWASP validation rules
      * Supports standard email format with:
-     * - Alphanumeric characters, underscore, plus, ampersand, hyphen in local part
-     * - Multiple dots allowed in local part
+     * - Letters, digits and the characters {@code . _ % + -} in the local part, up to 64 characters,
+     *   starting and ending with a letter or digit
+     * - Single dots allowed in the local part; consecutive dots are rejected
      * - Domain part supports both regular domains and punycode (xn--) format
      * - Domain part must be valid with 2-25 character TLD or punycode TLD
      */
     private static final Pattern EMAIL_LOCAL_PART_PATTERN =
-            Pattern.compile("^[A-Za-z0-9](?:[a-zA-Z0-9._%+\\-]{0,61}[A-Za-z0-9])?$");
+            Pattern.compile("^[A-Za-z0-9](?:[a-zA-Z0-9._%+\\-]{0,62}[A-Za-z0-9])?$");
 
     private static final Pattern DOMAIN_PATTERN = Pattern.compile(
-            "^(?!.{256})(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+(?:[a-z]{2,63}|xn--[a-z0-9]{2,59})$");
+            "^(?!.{256})(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+(?:[a-z]{2,63}|xn--[a-z0-9]{2,59})$",
+            Pattern.CASE_INSENSITIVE);
 
     /**
      * Checks if a JSON string is blank or represents an empty value
      * Empty values include: null, blank string, "null", "[]", "{}"
      *
-     * @param json the JSON string to check
+     * @param json the JSON string to check, may be null
      * @return true if the JSON string is blank or represents an empty value, false otherwise
      */
-    public static boolean jsonBlank(String json) {
+    public static boolean jsonBlank(@Nullable String json) {
         return json == null || json.isBlank() || json.equals("null") || json.equals("[]") || json.equals("{}");
-    }
-
-    /**
-     * Checks if a Boolean value is strictly true using reference equality
-     *
-     * @param b the Boolean value to check
-     * @return true only if the Boolean value is equal to Boolean.TRUE, false otherwise
-     */
-    public static boolean True(Boolean b) {
-        return Boolean.TRUE == b;
-    }
-
-    /**
-     * Checks if a Boolean value is falsy (null or false)
-     * This is different from {@link #False(Boolean)} as it also returns true for null values
-     *
-     * @param b the Boolean value to check
-     * @return true if the Boolean value is null or false, false if it's true
-     */
-    public static boolean Falsy(Boolean b) {
-        return Boolean.TRUE != b;
-    }
-
-    /**
-     * Checks if a Boolean value is strictly false using reference equality
-     *
-     * @param b the Boolean value to check
-     * @return true only if the Boolean value is equal to Boolean.FALSE, false otherwise
-     */
-    public static boolean False(Boolean b) {
-        return Boolean.FALSE == b;
     }
 
     /**
@@ -80,24 +54,26 @@ public class Is {
      * - #RRGGBB (6 digits)
      * - #RRGGBBAA (8 digits with alpha channel)
      *
-     * @param colour the string to validate as a color code
-     * @return true if the string is a valid hex color code, false otherwise
+     * @param colour the string to validate as a color code, may be null
+     * @return true if the string is a valid hex color code; false otherwise, including for null or blank input
      */
-    public static boolean colour(String colour) {
+    public static boolean colour(@Nullable String colour) {
         return !StringUtils.isBlank(colour)
                 && HEX_COLOUR_PATTERN.matcher(colour).matches();
     }
 
     /**
      * Validates if a string represents a valid email address
-     * Uses a simplified regex pattern based on OWASP validation rules
+     * Uses a simplified regex pattern based on OWASP validation rules.
+     * The local part allows letters, digits and {@code . _ % + -} (not {@code &}), up to 64 characters.
+     * The domain part is matched case-insensitively. The whole address must be shorter than 256 characters.
      * Note: This is a basic validation and may not catch all edge cases
-     * defined in email RFCs
+     * defined in email RFCs. Never throws.
      *
-     * @param email the string to validate as an email address
-     * @return true if the string is a valid email address, false otherwise
+     * @param email the string to validate as an email address, may be null
+     * @return true if the string is a valid email address; false otherwise, including for null or blank input
      */
-    public static boolean email(String email) {
+    public static boolean email(@Nullable String email) {
         if (StringUtils.isBlank(email) || email.trim().length() < 5) {
             return false;
         }
@@ -122,16 +98,17 @@ public class Is {
     }
 
     /**
-     * Validates a custom hostname.
-     * The hostname must:
-     * - Not be null or empty
-     * - Not exceed 63 characters
-     * - Only contain alphanumeric characters, hyphens, and dots
-     * - make sure to store the hostname in lowercase for better results
+     * Validates a single DNS label such as a custom sub-domain.
+     * The label must:
+     * - Not be null or blank
+     * - Be 1 to 63 characters long
+     * - Contain only ASCII letters, digits and hyphens, and neither start nor end with a hyphen
+     * Dots are not allowed, so "example.com" is rejected. Store the label in lowercase for better results.
      *
-     * @param hostname The hostname to validate
+     * @param hostname the label to validate, may be null
+     * @return true if the label is a valid DNS label; false otherwise, including for null or blank input
      */
-    public static boolean subDomain(String hostname) {
+    public static boolean subDomain(@Nullable String hostname) {
         if (StringUtils.isBlank(hostname)) {
             return false;
         }

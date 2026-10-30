@@ -1,6 +1,8 @@
 package today.bonfire.oss.jutils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.BitSet;
 import lombok.extern.slf4j.Slf4j;
@@ -32,5 +34,29 @@ class BitSetHelpersTest {
         String base64String = BitSetHelpers.encode(originalBitSet);
         BitSet parsedBitSet = BitSetHelpers.decode(base64String);
         assertEquals(originalBitSet, parsedBitSet);
+    }
+
+    @Test
+    void encodeNullAndEmptyGiveEmptyString() {
+        assertEquals("", BitSetHelpers.encode(null));
+        assertEquals("", BitSetHelpers.encode(new BitSet()));
+    }
+
+    @Test
+    void decodeNullBlankAndEmptyGiveEmptyBitSet() {
+        assertEquals(new BitSet(), BitSetHelpers.decode(null));
+        assertEquals(new BitSet(), BitSetHelpers.decode(""));
+        assertEquals(new BitSet(), BitSetHelpers.decode("   "));
+    }
+
+    @Test
+    void decodeInvalidThrows() {
+        assertThrows(IllegalArgumentException.class, () -> BitSetHelpers.decode("+/+/"));
+    }
+
+    @Test
+    void emptyReturnsNewInstanceEachTime() {
+        assertEquals(new BitSet(), BitSetHelpers.empty());
+        assertNotSame(BitSetHelpers.empty(), BitSetHelpers.empty());
     }
 }
